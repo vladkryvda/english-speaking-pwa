@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <!-- PWA & Mobile Standalone Settings -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Orator">
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Orator" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <title>ORATOR — Speaking Lab</title>
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#000000" />
+
   <style>
     :root {
       --bg: #000000;
@@ -46,7 +44,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Core Screen Layout */
     .app-viewport {
       display: flex;
       flex-direction: column;
@@ -58,7 +55,6 @@
       position: relative;
     }
 
-    /* Modern Top Header */
     header {
       height: 56px;
       padding: 0 20px;
@@ -106,9 +102,12 @@
       gap: 5px;
       color: var(--text-muted);
     }
-    .capsule span { color: var(--text); font-weight: 500; }
 
-    /* Scrollable Dynamic Views */
+    .capsule span {
+      color: var(--text);
+      font-weight: 500;
+    }
+
     main {
       flex: 1;
       overflow-y: auto;
@@ -127,14 +126,16 @@
       flex: 1;
       animation: viewIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .view-screen.active { display: flex; }
+
+    .view-screen.active {
+      display: flex;
+    }
 
     @keyframes viewIn {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Cards & Containers */
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -164,7 +165,6 @@
       color: #ffffff;
     }
 
-    /* P.R.E.P Step Indicator */
     .prep-stepper {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -194,7 +194,6 @@
       color: var(--text-muted);
     }
 
-    /* Interactive Words/Pills */
     .token-row {
       display: flex;
       flex-wrap: wrap;
@@ -229,12 +228,12 @@
       border-radius: 50%;
       border: 1px solid var(--text-sub);
     }
+
     .token-pill.active .pill-dot {
       background: #fff;
       border-color: #fff;
     }
 
-    /* Core Action Hub */
     .action-hub {
       margin-top: auto;
       padding: 16px 0;
@@ -271,7 +270,10 @@
       justify-content: center;
       transition: transform 0.15s ease, border-color 0.15s ease;
     }
-    .record-trigger-btn:active { transform: scale(0.95); }
+
+    .record-trigger-btn:active {
+      transform: scale(0.95);
+    }
 
     .record-icon-inner {
       width: 54px;
@@ -288,7 +290,6 @@
       background: #ffffff;
     }
 
-    /* Speech Savers Rail */
     .savers-strip {
       background: #111114;
       border: 1px solid var(--card-border);
@@ -304,9 +305,13 @@
       color: var(--text-muted);
       font-style: italic;
     }
-    .saver-quote span { color: #fff; font-style: normal; margin-right: 4px; }
 
-    /* Button System */
+    .saver-quote span {
+      color: #fff;
+      font-style: normal;
+      margin-right: 4px;
+    }
+
     .app-btn {
       width: 100%;
       padding: 15px;
@@ -328,21 +333,27 @@
       background: #ffffff;
       color: #000000;
     }
-    .btn-solid:active { background: #dcdce0; }
+
+    .btn-solid:active {
+      background: #dcdce0;
+    }
 
     .btn-outline {
       background: transparent;
       border-color: var(--card-border);
       color: var(--text);
     }
-    .btn-outline:active { border-color: #fff; }
 
-    /* Evaluation Pills */
+    .btn-outline:active {
+      border-color: #fff;
+    }
+
     .eval-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
     }
+
     .eval-btn {
       padding: 12px 0;
       border-radius: 10px;
@@ -354,13 +365,13 @@
       cursor: pointer;
       transition: all 0.15s;
     }
+
     .eval-btn.selected {
       border-color: #fff;
       color: #fff;
       background: rgba(255, 255, 255, 0.08);
     }
 
-    /* Archive & Lexicon List Cards */
     .stream-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -386,7 +397,6 @@
       filter: invert(1) grayscale(1);
     }
 
-    /* STRICT SINGLE BOTTOM NAV */
     nav.bottom-dock {
       height: 64px;
       padding-bottom: env(safe-area-inset-bottom, 0);
@@ -425,9 +435,10 @@
       stroke-linejoin: round;
     }
 
-    .dock-tab.active { color: #ffffff; }
+    .dock-tab.active {
+      color: #ffffff;
+    }
 
-    /* Input styling */
     .text-input {
       width: 100%;
       padding: 12px 14px;
@@ -439,14 +450,15 @@
       font-size: 13px;
       outline: none;
     }
-    .text-input:focus { border-color: var(--card-border-active); }
+
+    .text-input:focus {
+      border-color: var(--card-border-active);
+    }
   </style>
 </head>
-<body>
 
+<body>
   <div class="app-viewport">
-    
-    <!-- Top Bar -->
     <header>
       <div class="brand-title">
         <div class="brand-dot"></div>
@@ -458,13 +470,8 @@
       </div>
     </header>
 
-    <!-- Content Area -->
     <main>
-      
-      <!-- SCREEN 1: PRACTICE -->
       <section id="viewPractice" class="view-screen active">
-        
-        <!-- PHASE 1: PREPARATION -->
         <div id="subPrepPhase" style="display:flex; flex-direction:column; gap:16px; flex:1;">
           <div class="card">
             <div class="card-label">Daily Inquiry</div>
@@ -505,7 +512,6 @@
           </div>
         </div>
 
-        <!-- PHASE 2: RECORDING -->
         <div id="subRecordPhase" style="display:none; flex-direction:column; gap:16px; flex:1;">
           <div class="card">
             <div class="card-label">Active Dilemma</div>
@@ -533,7 +539,6 @@
           </div>
         </div>
 
-        <!-- PHASE 3: REVIEW & AUDIT -->
         <div id="subReviewPhase" style="display:none; flex-direction:column; gap:16px; flex:1;">
           <div class="card">
             <div class="card-label">Session Self-Review</div>
@@ -544,9 +549,9 @@
           <div class="card">
             <div class="card-label">Self-Assessment</div>
             <div class="eval-row">
-              <button class="eval-btn" onclick="app.setEval(1, this)">Needs Work</button>
-              <button class="eval-btn selected" onclick="app.setEval(2, this)">Decent</button>
-              <button class="eval-btn" onclick="app.setEval(3, this)">Articulate</button>
+              <button class="eval-btn" type="button" data-rating="1">Needs Work</button>
+              <button class="eval-btn selected" type="button" data-rating="2">Decent</button>
+              <button class="eval-btn" type="button" data-rating="3">Articulate</button>
             </div>
           </div>
 
@@ -554,10 +559,8 @@
             <button class="app-btn btn-solid" id="btnSaveSession">Preserve In Archive</button>
           </div>
         </div>
-
       </section>
 
-      <!-- SCREEN 2: ARCHIVE -->
       <section id="viewArchive" class="view-screen">
         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
           <div>
@@ -568,7 +571,6 @@
         <div style="display:flex; flex-direction:column; gap:10px;" id="archiveStream"></div>
       </section>
 
-      <!-- SCREEN 3: LEXICON -->
       <section id="viewVocab" class="view-screen">
         <div>
           <div class="card-label">Lexical Vault</div>
@@ -578,14 +580,13 @@
         <div style="display:flex; flex-direction:column; gap:8px;" id="vocabStream"></div>
       </section>
 
-      <!-- SCREEN 4: SYSTEM SETTINGS -->
       <section id="viewSettings" class="view-screen">
         <div class="card">
           <div class="card-label">Database Synchronization</div>
           <div style="font-size:12px; color:var(--text-muted);">
             Link a remote <code>data.json</code> file or refresh the pre-baked vocabulary corpus:
           </div>
-          <input type="url" id="txtDataUrl" class="text-input" placeholder="https://.../data.json" value="data.json">
+          <input type="url" id="txtDataUrl" class="text-input" placeholder="https://.../data.json" value="data.json" />
           <button class="app-btn btn-outline" id="btnSyncCorpus">Sync Corpus From URL</button>
         </div>
 
@@ -597,7 +598,7 @@
           <button class="app-btn btn-outline" id="btnExportData">Export Everything (.JSON)</button>
           <label class="app-btn btn-outline" style="cursor:pointer;">
             Restore Backup
-            <input type="file" id="fileImport" accept=".json" style="display:none;">
+            <input type="file" id="fileImport" accept=".json" style="display:none;" />
           </label>
         </div>
 
@@ -606,35 +607,29 @@
           <div style="font-family:var(--mono); font-size:11px; color:var(--text-muted);" id="lblDiagnostics">...</div>
         </div>
       </section>
-
     </main>
 
-    <!-- STRICT SINGLE BOTTOM NAVIGATION DOCK -->
     <nav class="bottom-dock">
-      <button class="dock-tab active" onclick="app.navTo('Practice', this)">
+      <button class="dock-tab active" type="button" data-view="Practice">
         <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Practice
       </button>
-      <button class="dock-tab" onclick="app.navTo('Archive', this)">
+      <button class="dock-tab" type="button" data-view="Archive">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Archive
       </button>
-      <button class="dock-tab" onclick="app.navTo('Vocab', this)">
+      <button class="dock-tab" type="button" data-view="Vocab">
         <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         Lexicon
       </button>
-      <button class="dock-tab" onclick="app.navTo('Settings', this)">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Vault
+      <button class="dock-tab" type="button" data-view="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.31 1.52v.17a2 2 0 0 1-4 0v-.17a1.65 1.65 0 0 0-1.31-1.52 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.52-1.31h-.17a2 2 0 0 1 0-4h.17a1.65 1.65 0 0 0 1.52-1.31 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.17a1.65 1.65 0 0 0 1.31-1.52v-.17a2 2 0 0 1 4 0v.17a1.65 1.65 0 0 0 1.31 1.52h.17a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.17a1.65 1.65 0 0 0 1.52 1.31h.17a2 2 0 0 1 0 4h-.17a1.65 1.65 0 0 0-1.52 1.31z"/></svg>
+        Settings
       </button>
     </nav>
-
   </div>
 
   <script>
-    /* =========================================================================
-       FALLBACK CORPUS (GUARANTEES 100% OFFLINE ZERO-CONFIG BOOT)
-       ========================================================================= */
     const DEFAULT_PROMPTS = [
       "Is making your bed every morning actually useful, or is it an overrated chore?",
       "Buying one expensive, durable wardrobe piece for 5 years vs. cheap clothes replaced yearly.",
@@ -660,62 +655,70 @@
       { id: "w5", word: "cognitive load", type: "word", meaning: "amount of mental effort expended", example: "Simplicity reduces cognitive load.", uses: 0 }
     ];
 
-    /* =========================================================================
-       INDEXEDDB ENGINE
-       ========================================================================= */
     class StorageEngine {
-      constructor() { this.db = null; }
+      constructor() {
+        this.db = null;
+      }
 
       async init() {
         return new Promise((resolve, reject) => {
-          const req = indexedDB.open('OratorCleanDB', 1);
-          req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('records')) db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
-            if (!db.objectStoreNames.contains('vocab')) db.createObjectStore('vocab', { keyPath: 'id' });
-            if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+          const request = indexedDB.open("OratorCleanDB", 1);
+
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("records")) {
+              db.createObjectStore("records", { keyPath: "id", autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains("vocab")) {
+              db.createObjectStore("vocab", { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("meta")) {
+              db.createObjectStore("meta", { keyPath: "key" });
+            }
           };
-          req.onsuccess = (e) => { this.db = e.target.result; resolve(); };
-          req.onerror = () => reject(req.error);
+
+          request.onsuccess = (event) => {
+            this.db = event.target.result;
+            resolve();
+          };
+
+          request.onerror = () => reject(request.error);
         });
       }
 
-      async getMeta(k, def = null) {
-        return new Promise(res => {
-          const req = this.db.transaction('meta', 'readonly').objectStore('meta').get(k);
-          req.onsuccess = () => res(req.result ? req.result.val : def);
-          req.onerror = () => res(def);
+      async getMeta(key, def = null) {
+        return new Promise((resolve) => {
+          const req = this.db.transaction("meta", "readonly").objectStore("meta").get(key);
+          req.onsuccess = () => resolve(req.result ? req.result.val : def);
+          req.onerror = () => resolve(def);
         });
       }
 
-      async setMeta(k, val) {
-        return new Promise(res => {
-          const tx = this.db.transaction('meta', 'readwrite');
-          tx.objectStore('meta').put({ key: k, val });
-          tx.oncomplete = () => res();
+      async setMeta(key, val) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction("meta", "readwrite");
+          tx.objectStore("meta").put({ key, val });
+          tx.oncomplete = () => resolve();
         });
       }
 
       async list(store) {
-        return new Promise(res => {
-          const req = this.db.transaction(store, 'readonly').objectStore(store).getAll();
-          req.onsuccess = () => res(req.result || []);
-          req.onerror = () => res([]);
+        return new Promise((resolve) => {
+          const req = this.db.transaction(store, "readonly").objectStore(store).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
         });
       }
 
       async put(store, data) {
-        return new Promise(res => {
-          const tx = this.db.transaction(store, 'readwrite');
+        return new Promise((resolve) => {
+          const tx = this.db.transaction(store, "readwrite");
           tx.objectStore(store).put(data);
-          tx.oncomplete = () => res();
+          tx.oncomplete = () => resolve();
         });
       }
     }
 
-    /* =========================================================================
-       APPLICATION CONTROLLER
-       ========================================================================= */
     class OratorApp {
       constructor() {
         this.storage = new StorageEngine();
@@ -746,14 +749,17 @@
         await this.loadMeta();
         this.evaluateStreak();
         this.bindUiEvents();
-        this.setupDailySession();
+        await this.setupDailySession();
         this.refreshCapsules();
+        this.renderArchive();
+        this.renderVocab();
+        this.renderSettings();
       }
 
       async bootstrapCorpus() {
-        const vocab = await this.storage.list('vocab');
+        const vocab = await this.storage.list("vocab");
         if (vocab.length === 0) {
-          await this.syncFromUrl('data.json');
+          await this.syncFromUrl("data.json");
         }
       }
 
@@ -761,16 +767,31 @@
         try {
           const res = await fetch(url);
           const data = await res.json();
-          for (const c of data.connectors) await this.storage.put('vocab', { ...c, uses: 0 });
-          for (const w of data.vocabulary) await this.storage.put('vocab', { ...w, uses: 0 });
-          await this.storage.setMeta('prompts', data.prompts.map(p => p.question));
+
+          if (Array.isArray(data.connectors)) {
+            for (const item of data.connectors) {
+              await this.storage.put("vocab", { ...item, uses: 0 });
+            }
+          }
+
+          if (Array.isArray(data.vocabulary)) {
+            for (const item of data.vocabulary) {
+              await this.storage.put("vocab", { ...item, uses: 0 });
+            }
+          }
+
+          if (Array.isArray(data.prompts)) {
+            await this.storage.setMeta("prompts", data.prompts.map(p => p.question || p));
+          }
+
           return true;
-        } catch (e) {
-          // If external fetch fails, seed internal defaults
-          const vocab = await this.storage.list('vocab');
+        } catch (error) {
+          const vocab = await this.storage.list("vocab");
           if (vocab.length === 0) {
-            for (const v of DEFAULT_VOCABULARY) await this.storage.put('vocab', v);
-            await this.storage.setMeta('prompts', DEFAULT_PROMPTS);
+            for (const item of DEFAULT_VOCABULARY) {
+              await this.storage.put("vocab", item);
+            }
+            await this.storage.setMeta("prompts", DEFAULT_PROMPTS);
           }
           return false;
         }
@@ -778,31 +799,33 @@
 
       async loadMeta() {
         const today = new Date().toISOString().slice(0, 10);
-        this.streak = await this.storage.getMeta('streak', 0);
-        this.freezes = await this.storage.getMeta('freezes', 1);
-        this.lastDate = await this.storage.getMeta('lastDate', null);
-        this.creationDate = await this.storage.getMeta('creationDate', today);
-        await this.storage.setMeta('creationDate', this.creationDate);
+        this.streak = await this.storage.getMeta("streak", 0);
+        this.freezes = await this.storage.getMeta("freezes", 1);
+        this.lastDate = await this.storage.getMeta("lastDate", null);
+        this.creationDate = await this.storage.getMeta("creationDate", today);
+        await this.storage.setMeta("creationDate", this.creationDate);
 
-        // 1 Freeze every 14 days
-        const lastFreezeDate = await this.storage.getMeta('lastFreezeAccrual', this.creationDate);
+        const lastFreezeDate = await this.storage.getMeta("lastFreezeAccrual", this.creationDate);
         const daysPassed = Math.floor((new Date(today) - new Date(lastFreezeDate)) / (1000 * 60 * 60 * 24));
+
         if (daysPassed >= 14) {
           const accrued = Math.floor(daysPassed / 14);
           this.freezes += accrued;
-          await this.storage.setMeta('freezes', this.freezes);
-          await this.storage.setMeta('lastFreezeAccrual', today);
+          await this.storage.setMeta("freezes", this.freezes);
+          await this.storage.setMeta("lastFreezeAccrual", today);
         }
       }
 
       evaluateStreak() {
         const today = new Date().toISOString().slice(0, 10);
+
         if (!this.lastDate) {
           this.updateBadge(1);
           return;
         }
 
         const delta = Math.floor((new Date(today) - new Date(this.lastDate)) / (1000 * 60 * 60 * 24));
+
         if (delta === 0) {
           this.updateBadge(0);
         } else if (delta === 1) {
@@ -811,68 +834,82 @@
           const missed = delta - 1;
           if (this.freezes >= missed) {
             this.freezes -= missed;
-            this.storage.setMeta('freezes', this.freezes);
+            this.storage.setMeta("freezes", this.freezes);
             this.updateBadge(1);
           } else {
             this.streak = 0;
-            this.storage.setMeta('streak', 0);
+            this.storage.setMeta("streak", 0);
             this.updateBadge(1);
           }
         }
       }
 
       updateBadge(val) {
-        if ('setAppBadge' in navigator) {
-          if (val > 0) navigator.setAppBadge(val).catch(() => {});
-          else navigator.clearAppBadge().catch(() => {});
+        if ("setAppBadge" in navigator) {
+          if (val > 0) {
+            navigator.setAppBadge(val).catch(() => {});
+          } else {
+            navigator.clearAppBadge().catch(() => {});
+          }
         }
       }
 
       refreshCapsules() {
-        document.getElementById('statStreak').innerText = String(this.streak).padStart(2, '0');
-        document.getElementById('statFreeze').innerText = String(this.freezes).padStart(2, '0');
+        document.getElementById("statStreak").innerText = String(this.streak).padStart(2, "0");
+        document.getElementById("statFreeze").innerText = String(this.freezes).padStart(2, "0");
       }
 
       async setupDailySession() {
-        const prompts = await this.storage.getMeta('prompts', DEFAULT_PROMPTS);
+        const prompts = await this.storage.getMeta("prompts", DEFAULT_PROMPTS);
         const now = new Date();
         const start = new Date(now.getFullYear(), 0, 0);
         const dayOfYear = Math.floor((now - start) / (1000 * 60 * 60 * 24));
 
         this.prompt = prompts[dayOfYear % prompts.length];
-        document.getElementById('lblPrompt').innerText = `"${this.prompt}"`;
-        document.getElementById('lblEchoPrompt').innerText = `"${this.prompt}"`;
+        document.getElementById("lblPrompt").innerText = `"${this.prompt}"`;
+        document.getElementById("lblEchoPrompt").innerText = `"${this.prompt}"`;
 
-        const allVocab = await this.storage.list('vocab');
-        const connectors = allVocab.filter(v => v.type === 'connector').sort((a,b) => a.uses - b.uses);
-        const words = allVocab.filter(v => v.type === 'word').sort((a,b) => a.uses - b.uses);
+        const allVocab = await this.storage.list("vocab");
+        const connectors = allVocab.filter(v => v.type === "connector").sort((a, b) => a.uses - b.uses);
+        const words = allVocab.filter(v => v.type === "word").sort((a, b) => a.uses - b.uses);
 
         this.tokens = [connectors[0], words[0], words[1] || words[0]].filter(Boolean);
+
+        if (!this.tokens.length) {
+          this.tokens = DEFAULT_VOCABULARY.slice(0, 3);
+        }
+
         this.renderTokens();
         this.startPrepCountdown(30);
       }
 
       renderTokens() {
-        const prepBox = document.getElementById('prepTokenCloud');
-        const liveBox = document.getElementById('liveTokenCloud');
-        prepBox.innerHTML = '';
-        liveBox.innerHTML = '';
+        const prepBox = document.getElementById("prepTokenCloud");
+        const liveBox = document.getElementById("liveTokenCloud");
+        prepBox.innerHTML = "";
+        liveBox.innerHTML = "";
 
-        this.tokens.forEach(t => {
+        this.tokens.forEach((token) => {
           const makePill = (interactive) => {
-            const p = document.createElement('div');
-            const checked = this.checkedTokens.has(t.id);
-            p.className = `token-pill ${checked ? 'active' : ''}`;
-            p.innerHTML = `<span class="pill-dot"></span><span>${t.word}</span>`;
+            const p = document.createElement("div");
+            const checked = this.checkedTokens.has(token.id);
+            p.className = `token-pill ${checked ? "active" : ""}`;
+            p.innerHTML = `<span class="pill-dot"></span><span>${token.word}</span>`;
+
             if (interactive) {
               p.onclick = () => {
-                if (this.checkedTokens.has(t.id)) this.checkedTokens.delete(t.id);
-                else this.checkedTokens.add(t.id);
+                if (this.checkedTokens.has(token.id)) {
+                  this.checkedTokens.delete(token.id);
+                } else {
+                  this.checkedTokens.add(token.id);
+                }
                 this.renderTokens();
               };
             }
+
             return p;
           };
+
           prepBox.appendChild(makePill(false));
           liveBox.appendChild(makePill(true));
         });
@@ -880,57 +917,85 @@
 
       startPrepCountdown(sec) {
         let remaining = sec;
-        const el = document.getElementById('lblPrepTimer');
+        const el = document.getElementById("lblPrepTimer");
         clearInterval(this.prepInterval);
+
         this.prepInterval = setInterval(() => {
-          remaining--;
-          el.innerText = `00:${String(remaining).padStart(2, '0')}`;
+          remaining -= 1;
+          el.innerText = remaining > 0 ? `00:${String(remaining).padStart(2, "0")}` : "READY";
+
           if (remaining <= 0) {
             clearInterval(this.prepInterval);
-            el.innerText = "READY";
+            setTimeout(() => {
+              const prepPhase = document.getElementById("subPrepPhase");
+              if (prepPhase && prepPhase.style.display !== "none") {
+                this.startRecording();
+              }
+            }, 600);
           }
         }, 1000);
       }
 
       async startRecording() {
         clearInterval(this.prepInterval);
-        document.getElementById('subPrepPhase').style.display = 'none';
-        document.getElementById('subRecordPhase').style.display = 'flex';
+
+        document.getElementById("subPrepPhase").style.display = "none";
+        document.getElementById("subRecordPhase").style.display = "flex";
 
         try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("getUserMedia not supported");
+          }
+
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           this.initOscilloscope(stream);
 
+          if (!window.MediaRecorder) {
+            throw new Error("MediaRecorder not supported");
+          }
+
           this.mediaRecorder = new MediaRecorder(stream);
           this.audioChunks = [];
-          this.mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) this.audioChunks.push(e.data);
+          this.audioBlob = null;
+
+          this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              this.audioChunks.push(event.data);
+            }
           };
+
           this.mediaRecorder.onstop = () => {
-            stream.getTracks().forEach(tr => tr.stop());
-            this.audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            stream.getTracks().forEach(track => track.stop());
+            this.audioBlob = new Blob(this.audioChunks, { type: "audio/webm" });
             this.showReviewStage();
           };
 
           this.mediaRecorder.start();
           this.secondsElapsed = 0;
+
           this.recInterval = setInterval(() => {
-            this.secondsElapsed++;
-            const m = Math.floor(this.secondsElapsed / 60);
-            const s = this.secondsElapsed % 60;
-            document.getElementById('lblRecClock').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            if (this.secondsElapsed >= 90) this.stopRecording();
+            this.secondsElapsed += 1;
+            const minutes = Math.floor(this.secondsElapsed / 60);
+            const seconds = this.secondsElapsed % 60;
+            document.getElementById("lblRecClock").innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+            if (this.secondsElapsed >= 90) {
+              this.stopRecording();
+            }
           }, 1000);
-        } catch (e) {
-          alert('Microphone access denied or unavailable.');
+
+        } catch (error) {
+          console.error(error);
+          alert("Microphone access denied or unavailable.");
           location.reload();
         }
       }
 
       stopRecording() {
-        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
           this.mediaRecorder.stop();
         }
+
         clearInterval(this.recInterval);
         cancelAnimationFrame(this.animFrame);
       }
@@ -942,227 +1007,295 @@
         source.connect(this.analyser);
         this.analyser.fftSize = 64;
 
-        const canvas = document.getElementById('audioWave');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.getElementById("audioWave");
+        const ctx = canvas.getContext("2d");
         const len = this.analyser.frequencyBinCount;
         const data = new Uint8Array(len);
 
         const draw = () => {
           this.animFrame = requestAnimationFrame(draw);
           this.analyser.getByteFrequencyData(data);
-          ctx.fillStyle = '#08080a';
+
+          ctx.fillStyle = "#08080a";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
           ctx.lineWidth = 1.5;
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = "#ffffff";
           ctx.beginPath();
 
           const slice = canvas.width / len;
           let x = 0;
+
           for (let i = 0; i < len; i++) {
             const v = data[i] / 128.0;
             const y = (v * canvas.height) / 2;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
+
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+
             x += slice;
           }
+
           ctx.lineTo(canvas.width, canvas.height / 2);
           ctx.stroke();
         };
+
         draw();
       }
 
       showReviewStage() {
-        document.getElementById('subRecordPhase').style.display = 'none';
-        document.getElementById('subReviewPhase').style.display = 'flex';
-        document.getElementById('audioReviewPlayer').src = URL.createObjectURL(this.audioBlob);
+        document.getElementById("subRecordPhase").style.display = "none";
+        document.getElementById("subReviewPhase").style.display = "flex";
+        if (this.audioBlob) {
+          document.getElementById("audioReviewPlayer").src = URL.createObjectURL(this.audioBlob);
+        }
       }
 
       setEval(rating, btn) {
         this.rating = rating;
-        document.querySelectorAll('.eval-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
+        document.querySelectorAll(".eval-btn").forEach((button) => {
+          button.classList.remove("selected");
+        });
+        btn.classList.add("selected");
+      }
+
+      blobToDataUrl(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
       }
 
       async saveSession() {
         const today = new Date().toISOString().slice(0, 10);
 
-        for (const t of this.tokens) {
-          if (this.checkedTokens.has(t.id)) {
-            t.uses = (t.uses || 0) + 1;
-            await this.storage.put('vocab', t);
+        for (const token of this.tokens) {
+          if (this.checkedTokens.has(token.id)) {
+            token.uses = (token.uses || 0) + 1;
+            await this.storage.put("vocab", token);
           }
         }
+
+        const audioData = this.audioBlob ? await this.blobToDataUrl(this.audioBlob) : null;
 
         const record = {
           date: today,
           timestamp: Date.now(),
           prompt: this.prompt,
-          audio: this.audioBlob,
           duration: this.secondsElapsed,
           usedTokens: Array.from(this.checkedTokens),
-          rating: this.rating
+          rating: this.rating,
+          audioData,
         };
-        await this.storage.put('records', record);
 
-        if (this.lastDate !== today) {
-          this.streak += 1;
-          this.lastDate = today;
-          await this.storage.setMeta('streak', this.streak);
-          await this.storage.setMeta('lastDate', today);
-        }
+        await this.storage.put("records", record);
 
-        this.updateBadge(0);
+        this.lastDate = today;
+        await this.storage.setMeta("lastDate", this.lastDate);
+        this.streak = (await this.storage.getMeta("streak", 0)) + 1;
+        await this.storage.setMeta("streak", this.streak);
+
         this.refreshCapsules();
-        alert('RECORD STORED TO LOCAL VAULT');
+        this.renderArchive();
+        this.renderVocab();
+        this.renderSettings();
+
+        alert("RECORD SAVED TO LOCAL VAULT");
         location.reload();
       }
 
       async renderArchive() {
-        const stream = document.getElementById('archiveStream');
-        stream.innerHTML = '';
-        const list = await this.storage.list('records');
-        list.sort((a,b) => b.timestamp - a.timestamp);
+        const stream = document.getElementById("archiveStream");
+        stream.innerHTML = "";
 
-        if (list.length === 0) {
-          stream.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:20px 0;">No audio recordings logged yet. Complete today\'s session.</div>';
+        const records = await this.storage.list("records");
+        records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        if (!records.length) {
+          stream.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:12px;">No audio recordings logged yet. Complete today\'s session.</div>';
           return;
         }
 
-        list.forEach(item => {
-          const card = document.createElement('div');
-          card.className = 'stream-card';
-          const score = item.rating === 3 ? 'Articulate' : item.rating === 2 ? 'Decent' : 'Needs Work';
+        records.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "stream-card";
+
+          const score = item.rating === 3 ? "Articulate" : item.rating === 2 ? "Decent" : "Needs Work";
+
           card.innerHTML = `
             <div class="stream-meta">
-              <span>${item.date} · ${item.duration}s</span>
-              <span>SCORE: ${score}</span>
+              <span>${item.date}</span>
+              <span>${item.duration || 0}s</span>
             </div>
-            <div style="font-size:14px; font-weight:500;">"${item.prompt}"</div>
-            <audio controls src="${URL.createObjectURL(item.audio)}"></audio>
+            <div style="font-size:13px; font-weight:500;">${item.prompt}</div>
+            <div class="stream-meta">
+              <span>Score: ${score}</span>
+            </div>
+            ${item.audioData ? `<audio controls src="${item.audioData}"></audio>` : ""}
           `;
+
           stream.appendChild(card);
         });
       }
 
       async renderVocab() {
-        const stream = document.getElementById('vocabStream');
-        stream.innerHTML = '';
-        const list = await this.storage.list('vocab');
+        const stream = document.getElementById("vocabStream");
+        stream.innerHTML = "";
 
+        const list = await this.storage.list("vocab");
         let mastered = 0;
-        list.forEach(v => {
-          const status = v.uses >= 4 ? 'MASTERED' : v.uses >= 1 ? 'ACTIVE' : 'DISCOVERED';
-          if (status === 'MASTERED') mastered++;
 
-          const card = document.createElement('div');
-          card.className = 'stream-card';
+        const cards = list.map((item) => {
+          const status = item.uses >= 4 ? "MASTERED" : item.uses >= 1 ? "ACTIVE" : "DISCOVERED";
+          if (status === "MASTERED") mastered += 1;
+
+          const card = document.createElement("div");
+          card.className = "stream-card";
+
           card.innerHTML = `
             <div class="stream-meta">
-              <span style="font-weight:600; color:#fff; font-size:13px;">${v.word}</span>
-              <span>[${status} : ${v.uses || 0}]</span>
+              <span style="font-weight:600; color:#fff;">${item.word}</span>
+              <span>${status}</span>
             </div>
-            <div style="font-size:13px; color:var(--text-muted);">${v.meaning}</div>
-            <div style="font-size:12px; color:#666; font-style:italic;">"${v.example}"</div>
+            <div style="font-size:12px; color:var(--text-muted);">${item.meaning}</div>
+            <div style="font-size:11px; color:var(--text-sub); font-style:italic;">${item.example}</div>
+            <div style="font-size:11px; color:var(--text-muted);">Uses: ${item.uses || 0}</div>
           `;
-          stream.appendChild(card);
+
+          return card;
         });
 
-        document.getElementById('lblVocabRatio').innerText = `${mastered} / ${list.length} Mastered`;
+        cards.forEach(card => stream.appendChild(card));
+
+        document.getElementById("lblVocabRatio").innerText = `${mastered} / ${list.length} Mastered`;
       }
 
       renderSettings() {
-        document.getElementById('lblDiagnostics').innerText = 
-          `Registered: ${this.creationDate}\nLast Session: ${this.lastDate || 'NEVER'}\nActive Freezes: ${this.freezes}`;
+        const diagnostics = document.getElementById("lblDiagnostics");
+        diagnostics.innerText = [
+          `Registered: ${this.creationDate || "N/A"}`,
+          `Last Session: ${this.lastDate || "NEVER"}`,
+          `Active Freezes: ${this.freezes}`,
+        ].join("\n");
       }
 
       async exportArchive() {
-        const records = await this.storage.list('records');
-        const vocab = await this.storage.list('vocab');
-        const streak = await this.storage.getMeta('streak', 0);
-        const freezes = await this.storage.getMeta('freezes', 1);
-        const lastDate = await this.storage.getMeta('lastDate', null);
+        const records = await this.storage.list("records");
+        const vocab = await this.storage.list("vocab");
+        const streak = await this.storage.getMeta("streak", 0);
+        const freezes = await this.storage.getMeta("freezes", 1);
+        const lastDate = await this.storage.getMeta("lastDate", null);
 
-        const serialized = [];
-        for (const r of records) {
-          const base64 = await new Promise(res => {
-            const rd = new FileReader();
-            rd.onloadend = () => res(rd.result);
-            rd.readAsDataURL(r.audio);
-          });
-          serialized.push({ ...r, audio: base64 });
-        }
+        const data = {
+          version: 1,
+          streak,
+          freezes,
+          lastDate,
+          vocab,
+          records,
+        };
 
-        const data = { version: 3, streak, freezes, lastDate, vocab, records: serialized };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `ORATOR_VAULT_${new Date().toISOString().slice(0,10)}.json`;
+        a.download = `orator-backup-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
       }
 
       async importArchive(file) {
-        const text = await file.text();
-        const data = JSON.parse(text);
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
 
-        await this.storage.setMeta('streak', data.streak);
-        await this.storage.setMeta('freezes', data.freezes);
-        await this.storage.setMeta('lastDate', data.lastDate);
+          if (data.streak !== undefined) {
+            await this.storage.setMeta("streak", data.streak);
+          }
+          if (data.freezes !== undefined) {
+            await this.storage.setMeta("freezes", data.freezes);
+          }
+          if (data.lastDate !== undefined) {
+            await this.storage.setMeta("lastDate", data.lastDate);
+          }
 
-        for (const v of data.vocab) await this.storage.put('vocab', v);
-        for (const r of data.records) {
-          const res = await fetch(r.audio);
-          const blob = await res.blob();
-          await this.storage.put('records', { ...r, audio: blob });
+          if (Array.isArray(data.vocab)) {
+            for (const item of data.vocab) {
+              await this.storage.put("vocab", item);
+            }
+          }
+
+          if (Array.isArray(data.records)) {
+            for (const item of data.records) {
+              await this.storage.put("records", item);
+            }
+          }
+
+          alert("ARCHIVE RESTORED SUCCESSFULLY");
+          location.reload();
+        } catch (error) {
+          alert("Invalid backup file.");
         }
-
-        alert('ARCHIVE RESTORED SUCCESSFULLY');
-        location.reload();
       }
 
       navTo(viewName, btn) {
-        document.querySelectorAll('.view-screen').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.dock-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(".view-screen").forEach((el) => {
+          el.classList.remove("active");
+        });
+
+        document.querySelectorAll(".dock-tab").forEach((tab) => {
+          tab.classList.remove("active");
+        });
 
         const target = document.getElementById(`view${viewName}`);
-        if (target) target.classList.add('active');
-        if (btn) btn.classList.add('active');
+        if (target) target.classList.add("active");
 
-        if (viewName === 'Archive') this.renderArchive();
-        if (viewName === 'Vocab') this.renderVocab();
-        if (viewName === 'Settings') this.renderSettings();
+        if (btn) btn.classList.add("active");
+
+        if (viewName === "Archive") this.renderArchive();
+        if (viewName === "Vocab") this.renderVocab();
+        if (viewName === "Settings") this.renderSettings();
       }
 
       bindUiEvents() {
-        document.getElementById('btnSkipPrep').onclick = () => this.startRecording();
-        document.getElementById('btnStopRec').onclick = () => this.stopRecording();
-        document.getElementById('btnSaveSession').onclick = () => this.saveSession();
-        document.getElementById('btnExportData').onclick = () => this.exportArchive();
-        document.getElementById('fileImport').onchange = (e) => {
-          if (e.target.files[0]) this.importArchive(e.target.files[0]);
-        };
-        document.getElementById('btnSyncCorpus').onclick = async () => {
-          const url = document.getElementById('txtDataUrl').value.trim();
+        document.getElementById("btnSkipPrep").onclick = () => this.startRecording();
+        document.getElementById("btnStopRec").onclick = () => this.stopRecording();
+
+        document.getElementById("btnSaveSession").onclick = () => this.saveSession();
+        document.getElementById("btnExportData").onclick = () => this.exportArchive();
+        document.getElementById("btnSyncCorpus").onclick = async () => {
+          const url = document.getElementById("txtDataUrl").value.trim();
           const ok = await this.syncFromUrl(url);
-          alert(ok ? 'Corpus synchronized successfully!' : 'Failed to fetch. Verify URL or CORS.');
+          alert(ok ? "Corpus synchronized successfully!" : "Failed to fetch corpus. Using fallback vocabulary.");
           location.reload();
         };
+
+        document.getElementById("fileImport").onchange = (event) => {
+          const file = event.target.files[0];
+          if (file) this.importArchive(file);
+        };
+
+        document.querySelectorAll(".dock-tab").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.navTo(button.dataset.view, button);
+          });
+        });
+
+        document.querySelectorAll(".eval-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.setEval(Number(button.dataset.rating), button);
+          });
+        });
       }
     }
 
     const app = new OratorApp();
-    window.addEventListener('DOMContentLoaded', () => app.init());
+    window.addEventListener("DOMContentLoaded", () => {
+      app.init();
+    });
   </script>
-  <script>
-    // Реєстрація Service Worker для повноцінної роботи офлайн
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('[PWA] Service Worker registered in scope:', reg.scope))
-          .catch((err) => console.error('[PWA] Service Worker registration failed:', err));
-      });
-    }
-  </script>
-</body>
 </body>
 </html>
