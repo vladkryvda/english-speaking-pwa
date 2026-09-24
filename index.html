@@ -1,8 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- PWA & Mobile Standalone Settings -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Orator">
+  
   <title>ORATOR — Speaking Lab</title>
   <meta name="theme-color" content="#000000">
   <style>
@@ -1144,5 +1153,16 @@
     const app = new OratorApp();
     window.addEventListener('DOMContentLoaded', () => app.init());
   </script>
+  <script>
+    // Реєстрація Service Worker для повноцінної роботи офлайн
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('[PWA] Service Worker registered in scope:', reg.scope))
+          .catch((err) => console.error('[PWA] Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
 </body>
 </html>
