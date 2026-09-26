@@ -1,16 +1,14 @@
 {
   "name": "Vocalize",
   "short_name": "Vocalize",
-  "description": "Active spoken English vocabulary trainer",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#FAFAFA",
   "theme_color": "#FAFAFA",
   "icons": [
     {
       "src": "./icon.svg",
-      "sizes": "512x512",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
