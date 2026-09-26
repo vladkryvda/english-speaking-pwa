@@ -3,38 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="color-scheme" content="light dark">
-  <title>Vocalize</title>
-  
-  <!-- PWA & Apple Status Bar Sync -->
-  <link rel="icon" type="image/svg+xml" href="./icon.svg">
-  <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="manifest" href="./manifest.json">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Vocalize">
   <meta name="theme-color" content="#FAFAFA" id="meta-theme-color">
+  <title>Vocalize</title>
+  
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="manifest" href="./manifest.json">
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
     
+    /* БЛОКУВАННЯ СКРОЛУ, ЗУМУ ТА ПРИХОВУВАННЯ СКРОЛБАРІВ */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-touch-callout: none;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
     html, body {
       background-color: #FAFAFA;
       color: #171717;
       height: 100dvh;
       max-height: 100dvh;
+      width: 100vw;
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: pan-x pan-y;
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
       transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* ФІКСАЦІЯ ПОРТРЕТНОЇ ОРІЄНТАЦІЇ */
+    @media screen and (orientation: landscape) {
+      body {
+        transform: rotate(0deg);
+      }
     }
 
     /* РЕЖИМ ЗАПИСУ: ЧИСТА OLED ТЕМРЯВА */
@@ -43,21 +62,15 @@
       color: #FFFFFF !important;
     }
 
-    body.is-recording #top-bar,
-    body.is-recording #btn-refresh-prompt {
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-
     body.is-recording #prompt-question {
       color: #666666 !important;
+      pointer-events: none !important;
     }
 
     body.is-recording .word-text {
       color: #FFFFFF !important;
     }
 
-    /* Підказка під час запису адаптується під чорний фон */
     body.is-recording .word-hint {
       color: #888888 !important;
     }
@@ -75,77 +88,61 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Плавне розкриття прихованого прикладу */
+    /* Плавне розкриття прикладу */
     .word-hint {
       max-height: 0;
       opacity: 0;
       overflow: hidden;
-      transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, margin 0.2s ease;
+      transition: max-height 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease, margin 0.18s ease;
     }
     .word-hint.is-open {
       max-height: 80px;
       opacity: 1 !important;
       margin-top: 0.35rem;
-      pointer-events: auto !important;
     }
 
-    /* Інтерактивні слова у стані рефлексії */
-    .word-row.is-reflection {
-      cursor: pointer;
-    }
-    .word-row.is-reflection .word-text {
-      transition: all 0.2s ease;
-    }
+    /* Стан рефлексії на словах */
     .word-row.is-reflection.is-selected .word-text {
       text-decoration: line-through;
       color: #A3A3A3 !important;
     }
 
-    /* Горизонтальний свайп екранів */
+    /* АПАРАТНЕ 3D ПРИСКОРЕННЯ СВАЙПУ (120 FPS НА IPHONE) */
     .view-slider {
-      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
+      transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Анімація шторки додавання слів (Bottom Sheet) */
+    /* Bottom Sheet додавання */
     #add-sheet {
-      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+      transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
     }
   </style>
 </head>
 <body class="w-screen h-full relative overflow-hidden">
 
-  <!-- ================= ГОЛОВНИЙ СЛАЙДЕР (СВАЙП НАВІГАЦІЯ) ================= -->
+  <!-- ================= СЛАЙДЕР ЕКРАНІВ ================= -->
   <div id="view-slider" class="view-slider flex w-[200vw] h-full">
 
-    <!-- ================= 1. ЕКРАН ПРАКТИКИ ================= -->
-    <section id="view-practice" class="w-screen h-full flex flex-col justify-between px-7 pb-8 pt-3 relative flex-shrink-0">
+    <!-- ================= 1. ЕКРАН ПРАКТИКИ (АБСОЛЮТНИЙ МІНІМАЛІЗМ) ================= -->
+    <section id="view-practice" class="w-screen h-full flex flex-col justify-between px-7 pb-8 pt-4 relative flex-shrink-0">
       
-      <!-- Верхній рядок: тільки тонкий «+» праворуч (жодних кнопок бібліотеки) -->
-      <div id="top-bar" class="w-full flex justify-end items-center z-10 transition-opacity duration-200">
-        <button id="open-add-btn" title="Add expression" class="text-neutral-300 hover:text-neutral-950 transition-colors p-1.5 active:scale-90">
-          <i data-lucide="plus" class="w-4 h-4 stroke-[1.5]"></i>
-        </button>
+      <!-- ТЕМА СЦЕНАРІЮ (ТАП ПО НІЙ ЗМІНЮЄ ТЕМУ) -->
+      <div id="scenario-container" class="w-full flex flex-col items-center text-center pt-2">
+        <p id="prompt-question" title="Tap to change topic" class="text-xs sm:text-sm font-light text-neutral-400 leading-relaxed max-w-xs transition-opacity cursor-pointer active:opacity-40">
+          Loading scenario...
+        </p>
       </div>
 
-      <!-- ТЕМА СЦЕНАРІЮ (Кнопка оновлення зникає під час запису) -->
-      <div id="scenario-container" class="w-full flex flex-col items-center text-center mt-1">
-        <div class="flex items-center gap-2">
-          <p id="prompt-question" class="text-xs sm:text-sm font-light text-neutral-400 leading-relaxed max-w-xs transition-colors">
-            Loading scenario...
-          </p>
-          <button id="btn-refresh-prompt" title="Change scenario" class="text-neutral-300 hover:text-neutral-950 active:rotate-180 transition-all p-0.5">
-            <i data-lucide="rotate-cw" class="w-3 h-3 stroke-[1.5]"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- 3 ВЕЛИКІ СЛОВА В СТОВПЧИК (Підказки розгортаються по тапу і в спокої, і під час запису!) -->
+      <!-- 3 ВЕЛИКІ СЛОВА В СТОВПЧИК -->
       <div id="words-container" class="flex-1 flex flex-col justify-center items-center space-y-8 sm:space-y-10 my-auto w-full">
-        <!-- Слова генеруються динамічно -->
+        <!-- Генерується через JS -->
       </div>
 
-      <!-- ПІДКАЗКА РЕФЛЕКСІЇ (Тільки після запису) -->
-      <div id="reflection-hint" class="hidden text-center text-[11px] font-mono uppercase tracking-widest text-neutral-400 mb-2">
+      <!-- ПІДКАЗКА РЕФЛЕКСІЇ -->
+      <div id="reflection-hint" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">
         Tap words you used
       </div>
 
@@ -153,15 +150,24 @@
       <div id="action-zone" class="w-full flex flex-col items-center">
         
         <!-- Кнопка запису -->
-        <button id="mic-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-all shadow-md flex items-center justify-center">
+        <button id="mic-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-transform shadow-md flex items-center justify-center">
           <div id="stop-square" class="w-4 h-4 rounded-sm bg-white hidden"></div>
         </button>
 
-        <!-- Елементи рефлексії на місці -->
+        <!-- Елементи рефлексії на місці (Слухати + Пауза + Завершити) -->
         <div id="reflection-controls" class="hidden flex items-center gap-4">
-          <button id="btn-play-self" title="Listen" class="w-12 h-12 rounded-full border border-neutral-200 bg-white flex items-center justify-center active:scale-90 transition-transform">
-            <i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>
+          <button id="btn-play-self" title="Listen" class="w-12 h-12 rounded-full border border-neutral-200 bg-white flex items-center justify-center active:scale-90 transition-transform text-neutral-950">
+            <!-- Іконка Play за замовчуванням -->
+            <svg id="play-icon-svg" class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <!-- Іконка Pause (прихована) -->
+            <svg id="pause-icon-svg" class="w-4 h-4 fill-current hidden" viewBox="0 0 24 24">
+              <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+              <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+            </svg>
           </button>
+          
           <button id="btn-done-reflection" class="px-7 py-3.5 rounded-full bg-neutral-950 text-white font-mono text-xs uppercase tracking-wider active:scale-95 transition-all shadow-sm">
             Done →
           </button>
@@ -171,65 +177,63 @@
 
     </section>
 
-    <!-- ================= 2. БІБЛІОТЕКА (ВХІД ЧЕРЕЗ СВАЙП ВЛІВО) ================= -->
-    <section id="view-library" class="w-screen h-full flex flex-col px-7 pb-8 pt-3 relative flex-shrink-0 bg-[#FAFAFA]">
+    <!-- ================= 2. БІБЛІОТЕКА (ВХІД ТІЛЬКИ ЧЕРЕЗ СВАЙП ВЛІВО) ================= -->
+    <section id="view-library" class="w-screen h-full flex flex-col px-7 pb-8 pt-4 relative flex-shrink-0 bg-[#FAFAFA]">
       
-      <!-- Верхній рядок Бібліотеки -->
-      <div class="w-full flex justify-between items-center mb-4">
-        <button id="close-library-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-950 transition-colors py-1 flex items-center gap-1 active:scale-95">
-          <span class="text-[10px]">←</span>
-          <span>Practice</span>
-        </button>
-
-        <!-- МІНІМАЛЬНИЙ СТРІК -->
-        <div class="flex items-center gap-1 text-[11px] font-mono text-neutral-500">
-          <span id="streak-icon">●</span>
-          <span id="streak-count">0</span>
+      <!-- Верхній рядок Бібліотеки: Стрік зліва, Додати (+) справа -->
+      <div class="w-full flex justify-between items-center mb-4 pt-1">
+        <div class="flex items-center gap-1.5 text-[11px] font-mono text-neutral-500">
+          <span>●</span>
+          <span id="streak-count" class="font-medium text-neutral-950">0</span>
           <span class="text-[9px] text-neutral-400 uppercase tracking-wider">days streak</span>
         </div>
+
+        <!-- Кнопка додавання слова (+) перенесена сюди -->
+        <button id="open-add-btn" title="Add expression" class="p-1.5 text-neutral-400 hover:text-neutral-950 active:scale-90 transition-transform">
+          <svg class="w-4 h-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <line x1="7" y1="2" x2="7" y2="12"></line>
+            <line x1="2" y1="7" x2="12" y2="7"></line>
+          </svg>
+        </button>
       </div>
 
-      <!-- Вкладки Бібліотеки -->
+      <!-- Вкладки: Слова / Аудіо -->
       <div class="flex items-center gap-4 border-b border-neutral-200/80 pb-2 mb-3">
         <button id="subtab-words" class="text-xs font-mono uppercase tracking-wider font-medium text-neutral-950 transition-colors">
           Words (<span id="words-count">0</span>)
         </button>
         <button id="subtab-audio" class="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-950 transition-colors">
-          Audio Notes (<span id="audio-count">0</span>)
+          Audio (<span id="audio-count">0</span>)
         </button>
       </div>
 
       <!-- Контент Бібліотеки -->
-      <div id="library-content" class="flex-1 overflow-y-auto overscroll-y-contain space-y-2 pb-12">
-        <!-- Списки -->
-      </div>
+      <div id="library-content" class="flex-1 overflow-y-auto overscroll-y-contain space-y-2 pb-12"></div>
 
     </section>
 
   </div>
 
-  <!-- ================= FLUID BOTTOM SHEET (ШВИДКЕ ДОДАВАННЯ СЛОВА) ================= -->
+  <!-- ================= BOTTOM SHEET ДОДАВАННЯ СЛОВА ================= -->
   <div id="add-sheet-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-200 flex flex-col justify-end">
     <div id="add-sheet" class="w-full max-w-md mx-auto bg-white rounded-t-[32px] p-6 pt-3 shadow-2xl border-t border-neutral-100 translate-y-full">
       
-      <!-- Ручка для закриття свайпом -->
-      <div class="w-9 h-1 rounded-full bg-neutral-200 mx-auto mb-4"></div>
+      <div class="w-9 h-1 rounded-full bg-neutral-200 mx-auto mb-4 cursor-grab"></div>
       
       <div class="flex items-center justify-between mb-4">
         <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">New Expression</span>
         <button id="close-sheet-btn" class="text-neutral-400 hover:text-neutral-900 text-xs font-mono p-1">Cancel</button>
       </div>
 
-      <!-- Лаконічна інлайн форма без рамок -->
       <form id="add-sheet-form" class="space-y-4">
         <div>
           <input type="text" id="sheet-phrase" required placeholder="Word or expression" autocomplete="off"
-                 class="w-full text-base font-normal text-neutral-950 placeholder-neutral-300 focus:outline-none border-b border-neutral-100 pb-2 bg-transparent transition-colors">
+                 class="w-full text-base font-normal text-neutral-950 placeholder-neutral-300 focus:outline-none border-b border-neutral-100 pb-2 bg-transparent">
         </div>
 
         <div>
           <input type="text" id="sheet-example" placeholder="Example context (optional)" autocomplete="off"
-                 class="w-full text-xs font-light text-neutral-600 placeholder-neutral-300 focus:outline-none border-b border-neutral-100 pb-2 bg-transparent transition-colors">
+                 class="w-full text-xs font-light text-neutral-600 placeholder-neutral-300 focus:outline-none border-b border-neutral-100 pb-2 bg-transparent">
         </div>
 
         <div class="pt-2 flex items-center justify-between">
@@ -245,8 +249,8 @@
 
   <!-- ================= JS ENGINE ================= -->
   <script>
-    /* 1. DATABASE */
-    const DB_NAME = 'vocalize_zen_v12';
+    /* 1. БАЗА ДАНИХ */
+    const DB_NAME = 'vocalize_zen_v13';
     let db;
 
     function openDB() {
@@ -323,14 +327,14 @@
       }
     }
 
-    /* 2. HAPTICS */
+    /* 2. ТАКТИЛЬНІСТЬ */
     function haptic(ms = 12) {
       if ('vibrate' in navigator) {
         try { navigator.vibrate(ms); } catch (e) {}
       }
     }
 
-    /* 3. STREAK & BADGING */
+    /* 3. СТРІК ТА PWA БЕЙДЖ */
     function getLocalDateStr(d = new Date()) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -369,7 +373,7 @@
       updateStreakDisplay();
     }
 
-    /* 4. SCENARIOS */
+    /* 4. СЦЕНАРІЇ */
     const PROMPTS = [
       "What is something in your industry or daily routine that people overcomplicate?",
       "Describe a situation that went sideways and how you reacted.",
@@ -380,7 +384,7 @@
       "Describe a situation where a shortcut caused a much bigger problem."
     ];
 
-    /* 5. APP STATE */
+    /* 5. СТАН ДОДАТКУ */
     let currentTriad = [];
     let currentPrompt = "";
     let isRecording = false;
@@ -395,8 +399,19 @@
     let wakeLock = null;
     let usedWordsMap = {};
     let activePlayerAudio = null;
+    let recordMimeType = '';
 
-    /* 6. PRACTICE INITIALIZATION */
+    // Визначення нативного формату аудіо для iOS Safari
+    function detectMimeType() {
+      if (typeof MediaRecorder === 'undefined') return '';
+      const candidates = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm'];
+      for (let c of candidates) {
+        if (MediaRecorder.isTypeSupported(c)) return c;
+      }
+      return '';
+    }
+
+    /* 6. ПРАКТИКА ТА ЗМІНА ТЕМИ ПО ТАПУ */
     async function initPracticeSession() {
       const all = await getCards();
       if (all.length < 3) return;
@@ -407,7 +422,6 @@
 
       document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
 
-      // 3 СЛОВА В СТОВПЧИК
       const container = document.getElementById('words-container');
       container.innerHTML = '';
       usedWordsMap = {};
@@ -426,14 +440,12 @@
           ${card.example ? `<p class="word-hint text-xs text-neutral-400 font-light leading-relaxed max-w-[280px]">“${card.example}”</p>` : ''}
         `;
 
-        // КЛІК НА СЛОВО: ПРАЦЮЄ І У СПОКОЇ, І ПІД ЧАС ЗАПИСУ!
         row.addEventListener('click', () => {
           if (isReflectionMode) {
             haptic(8);
             usedWordsMap[card.id] = !usedWordsMap[card.id];
             row.classList.toggle('is-selected', usedWordsMap[card.id]);
           } else {
-            // Розгортає підказку (включаючи стан темряви при записі)
             haptic(6);
             const hint = row.querySelector('.word-hint');
             if (hint) hint.classList.toggle('is-open');
@@ -446,14 +458,15 @@
       exitReflectionMode();
     }
 
-    // Зміна теми заблокована під час запису
-    document.getElementById('btn-refresh-prompt').addEventListener('click', () => {
-      if (isRecording) return;
+    // Тап по тексту теми змінює сценарій
+    document.getElementById('prompt-question').addEventListener('click', () => {
+      if (isRecording || isReflectionMode) return;
+      haptic(10);
       currentPrompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
       document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
     });
 
-    /* 7. WAKE LOCK & 45s CHIME */
+    /* 7. WAKE LOCK ТА 45с СИГНАЛ */
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
@@ -483,7 +496,7 @@
       } catch (e) {}
     }
 
-    /* 8. RECORDING ENGINE */
+    /* 8. ЗАПИС АУДІО (БЕЗЗБІЙНИЙ IOS MP4 ЗАПИС) */
     const micBtn = document.getElementById('mic-btn');
     const metaThemeColor = document.getElementById('meta-theme-color');
 
@@ -491,23 +504,24 @@
       if (!isRecording) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream);
+          recordMimeType = detectMimeType();
+          
+          mediaRecorder = new MediaRecorder(stream, recordMimeType ? { mimeType: recordMimeType } : {});
           recordedChunks = [];
           chimePlayed = false;
 
-          mediaRecorder.ondataavailable = e => e.data.size > 0 && recordedChunks.push(e.data);
+          mediaRecorder.ondataavailable = e => e.data && e.data.size > 0 && recordedChunks.push(e.data);
           mediaRecorder.onstop = () => {
-            lastAudioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            lastAudioBlob = new Blob(recordedChunks, { type: recordMimeType || 'audio/mp4' });
             lastAudioUrl = URL.createObjectURL(lastAudioBlob);
             stream.getTracks().forEach(t => t.stop());
             enterReflectionMode();
           };
 
-          mediaRecorder.start();
+          mediaRecorder.start(250);
           isRecording = true;
           haptic(20);
 
-          // ПЕРЕХІД У ДЗЕН-ТЕМРЯВУ
           document.body.classList.add('is-recording');
           metaThemeColor.setAttribute('content', '#000000');
           await requestWakeLock();
@@ -543,7 +557,20 @@
       metaThemeColor.setAttribute('content', '#FAFAFA');
     }
 
-    /* 9. IN-PLACE REFLECTION */
+    /* 9. РЕФЛЕКСІЯ ТА СТАБІЛЬНИЙ ПЛЕЄР З ПАУЗОЮ */
+    const playSvg = document.getElementById('play-icon-svg');
+    const pauseSvg = document.getElementById('pause-icon-svg');
+
+    function setPlayerVisualState(isPlaying) {
+      if (isPlaying) {
+        playSvg.classList.add('hidden');
+        pauseSvg.classList.remove('hidden');
+      } else {
+        pauseSvg.classList.add('hidden');
+        playSvg.classList.remove('hidden');
+      }
+    }
+
     function enterReflectionMode() {
       isReflectionMode = true;
 
@@ -556,34 +583,51 @@
         row.classList.add('is-reflection');
       });
 
-      if (activePlayerAudio) activePlayerAudio.pause();
-      activePlayerAudio = new Audio(lastAudioUrl);
-      const playBtn = document.getElementById('btn-play-self');
-      playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>`;
-      lucide.createIcons();
+      // Ініціалізація аудіо для iOS
+      if (activePlayerAudio) {
+        activePlayerAudio.pause();
+        activePlayerAudio.src = '';
+      }
 
+      activePlayerAudio = new Audio();
+      activePlayerAudio.src = lastAudioUrl;
+      setPlayerVisualState(false);
+
+      activePlayerAudio.onended = () => {
+        setPlayerVisualState(false);
+      };
+
+      const playBtn = document.getElementById('btn-play-self');
       playBtn.onclick = () => {
+        if (!activePlayerAudio) return;
+        haptic(8);
+
         if (activePlayerAudio.paused) {
-          activePlayerAudio.play();
-          playBtn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5 fill-neutral-950 text-neutral-950"></i>`;
-          activePlayerAudio.onended = () => {
-            playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>`;
-            lucide.createIcons();
-          };
+          activePlayerAudio.play().then(() => {
+            setPlayerVisualState(true);
+          }).catch(err => {
+            console.error("Playback error:", err);
+          });
         } else {
           activePlayerAudio.pause();
-          playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>`;
+          setPlayerVisualState(false);
         }
-        lucide.createIcons();
       };
     }
 
     function exitReflectionMode() {
       isReflectionMode = false;
+      if (activePlayerAudio) {
+        activePlayerAudio.pause();
+        activePlayerAudio.src = '';
+      }
+      setPlayerVisualState(false);
+
       micBtn.classList.remove('hidden');
       document.getElementById('reflection-controls').classList.add('hidden');
       document.getElementById('reflection-controls').classList.remove('flex');
       document.getElementById('reflection-hint').classList.add('hidden');
+      
       document.querySelectorAll('.word-row').forEach(row => {
         row.classList.remove('is-reflection', 'is-selected');
       });
@@ -619,22 +663,20 @@
       await initPracticeSession();
     });
 
-    /* 10. SWIPE GESTURE ENGINE (СВАЙП ВЛІВО ДЛЯ БІБЛІОТЕКИ) */
+    /* 10. ШВИДКИЙ СВАЙП З АПАРАТНИМ ПРИСКОРЕННЯМ */
     const viewSlider = document.getElementById('view-slider');
     let currentTab = 'practice';
 
     function goToLibrary() {
       currentTab = 'library';
-      viewSlider.style.transform = 'translateX(-100vw)';
+      viewSlider.style.transform = 'translate3d(-100vw, 0, 0)';
       renderLibrary();
     }
 
     function goToPractice() {
       currentTab = 'practice';
-      viewSlider.style.transform = 'translateX(0vw)';
+      viewSlider.style.transform = 'translate3d(0vw, 0, 0)';
     }
-
-    document.getElementById('close-library-btn').addEventListener('click', goToPractice);
 
     let touchStartX = 0;
     let touchStartY = 0;
@@ -652,17 +694,16 @@
       const diffY = e.changedTouches[0].clientY - touchStartY;
       const elapsed = Date.now() - touchStartTime;
 
-      // Горизонтальний свайп (дистанція > 50px, час < 600ms)
-      if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3 && elapsed < 600) {
+      if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.3 && elapsed < 550) {
         if (diffX < 0 && currentTab === 'practice') {
-          goToLibrary(); // Свайп справа наліво -> Бібліотека
+          goToLibrary();
         } else if (diffX > 0 && currentTab === 'library') {
-          goToPractice(); // Свайп зліва направо -> Практика
+          goToPractice();
         }
       }
     }, { passive: true });
 
-    /* 11. LIBRARY (WORDS + AUDIO NOTES) */
+    /* 11. БІБЛІОТЕКА */
     let libraryTab = 'words';
     const subtabWords = document.getElementById('subtab-words');
     const subtabAudio = document.getElementById('subtab-audio');
@@ -705,7 +746,10 @@
               ${card.example ? `<div class="text-xs text-neutral-400 font-light truncate mt-0.5">${card.example}</div>` : ''}
             </div>
             <button class="del-card-btn p-2 text-neutral-300 hover:text-red-500 transition-colors" data-id="${card.id}">
-              <i data-lucide="trash-2" class="w-4 h-4 stroke-[1.5]"></i>
+              <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
             </button>
           `;
           libraryContent.appendChild(item);
@@ -737,7 +781,10 @@
             <div class="flex items-center justify-between text-[10px] font-mono text-neutral-400 pt-2 border-t border-neutral-100">
               <span>${new Date(rec.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${rec.duration}s</span>
               <button class="del-rec-btn p-1 text-neutral-300 hover:text-red-500" data-id="${rec.id}">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5 stroke-[1.5]"></i>
+                <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
               </button>
             </div>
           `;
@@ -749,11 +796,9 @@
           });
         });
       }
-
-      lucide.createIcons();
     }
 
-    /* 12. FLUID BOTTOM SHEET (ШВИДКЕ ДОДАВАННЯ СЛОВА) */
+    /* 12. ШВИДКА ШТОРКА ДОДАВАННЯ СЛІВ */
     const addOverlay = document.getElementById('add-sheet-overlay');
     const addSheet = document.getElementById('add-sheet');
     const sheetPhrase = document.getElementById('sheet-phrase');
@@ -778,7 +823,7 @@
         addOverlay.classList.add('hidden');
         sheetPhrase.value = '';
         sheetExample.value = '';
-      }, 250);
+      }, 240);
     }
 
     document.getElementById('open-add-btn').addEventListener('click', openAddSheet);
@@ -801,13 +846,22 @@
       if (currentTab === 'library') renderLibrary();
     });
 
-    /* 13. BOOTSTRAP */
+    /* 13. БЛОКУВАННЯ ЖЕСТІВ ЗУМУ ТА ПОВОРОТУ */
+    document.addEventListener('gesturestart', (e) => e.preventDefault());
+    document.addEventListener('touchmove', (e) => {
+      if (e.scale !== undefined && e.scale !== 1) e.preventDefault();
+    }, { passive: false });
+
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('portrait').catch(() => {});
+    }
+
+    /* 14. СТАРТ */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDB();
       await seedInitial();
       updateStreakDisplay();
       await initPracticeSession();
-      lucide.createIcons();
 
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
