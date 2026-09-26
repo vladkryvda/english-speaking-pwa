@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>Vocalize</title>
   
   <!-- PWA & Apple Status Bar Sync -->
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
   <link rel="manifest" href="./manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Vocalize">
-  <meta name="theme-color" content="#FAFAFA">
+  <meta name="theme-color" content="#FAFAFA" id="meta-theme-color">
   <meta name="msapplication-navbutton-color" content="#FAFAFA">
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,23 +22,65 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
     
-    :root {
-      color-scheme: light only;
-    }
-    
     html, body {
-      background-color: #FAFAFA !important;
+      background-color: #FAFAFA;
       color: #171717;
       height: 100dvh;
-      min-height: -webkit-fill-available;
+      max-height: 100dvh;
+      overflow: hidden;
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
-    }
-
-    body {
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* OLED TRUE BLACK ПРИ ЗАПИСІ */
+    html.oled-mode, body.oled-mode {
+      background-color: #000000 !important;
+      color: #EDEDED !important;
+    }
+
+    .oled-mode header,
+    .oled-mode #scenario-header {
+      opacity: 0.15;
+      transition: opacity 0.3s ease;
+    }
+
+    .oled-mode #prompt-question {
+      color: #525252 !important;
+    }
+
+    .oled-mode .practice-word-phrase {
+      color: #FFFFFF !important;
+    }
+
+    .oled-mode .practice-word-example {
+      color: #525252 !important;
+    }
+
+    .oled-mode #mic-toggle-btn {
+      background-color: #000000 !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .oled-mode #timer-display {
+      color: #8A8A8A !important;
+    }
+
+    .oled-mode #streak-wrapper .bg-neutral-950 {
+      background-color: #FFFFFF !important;
+    }
+    .oled-mode #streak-wrapper .bg-neutral-200,
+    .oled-mode #streak-wrapper .bg-neutral-200\/80 {
+      background-color: #262626 !important;
+    }
+    .oled-mode #streak-count {
+      color: #737373 !important;
     }
 
     .font-mono {
@@ -48,13 +91,11 @@
       transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
     }
 
-    /* Модальні інпути */
     #add-modal input, #add-modal textarea {
       background-color: #FFFFFF !important;
       color: #171717 !important;
     }
 
-    /* Spotlight: єдиний суцільний колір без різниці відтінків */
     #dict-search {
       background-color: transparent !important;
       color: #171717 !important;
@@ -71,84 +112,123 @@
     }
   </style>
 </head>
-<body class="w-screen overflow-hidden flex flex-col justify-between">
+<body class="w-screen h-full flex flex-col justify-between">
 
-  <!-- MINIMAL HEADER -->
-  <header class="w-full px-6 pt-3 pb-3 flex justify-between items-center z-20">
-    <nav class="flex items-center gap-5">
-      <button id="tab-practice-btn" class="text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors">
-        Practice <span id="queue-badge" class="text-[10px] text-neutral-400 font-normal ml-0.5">0</span>
+  <!-- ULTRA-MINIMAL HEADER З ЛАНЦЮЖКОМ СТРІКУ -->
+  <header class="w-full px-6 pt-2 pb-2 flex justify-between items-center z-20 flex-shrink-0 transition-opacity duration-300">
+    
+    <!-- 1. НАВІГАЦІЯ: КРУГ, СМУГА, ЗАПОВНЕНИЙ КВАДРАТ -->
+    <nav class="flex items-center gap-1">
+      <button id="tab-practice-btn" title="Practice" class="p-2 text-neutral-950 transition-colors active:scale-90 flex items-center justify-center">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="4.5" fill="currentColor" />
+        </svg>
       </button>
-      <button id="tab-dictionary-btn" class="text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors">
-        Dictionary <span id="dict-badge" class="text-[10px] text-neutral-400 font-normal ml-0.5">0</span>
+
+      <button id="tab-dictionary-btn" title="Dictionary" class="p-2 text-neutral-300 hover:text-neutral-950 transition-colors active:scale-90 flex items-center justify-center">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="2" y1="7" x2="12" y2="7" />
+        </svg>
+      </button>
+
+      <!-- Заповнений чорний квадрат -->
+      <button id="tab-recordings-btn" title="Recordings Archive" class="p-2 text-neutral-300 hover:text-neutral-950 transition-colors active:scale-90 flex items-center justify-center">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+          <rect x="2.5" y="2.5" width="9" height="9" rx="1.5" fill="currentColor" />
+        </svg>
       </button>
     </nav>
 
-    <button id="open-add-btn" class="text-neutral-400 hover:text-neutral-950 p-1 active:scale-90 transition-transform">
-      <i data-lucide="plus" class="w-5 h-5 stroke-[1.5]"></i>
+    <!-- 2. СТРІК: ЛАНЦЮЖОК ПОЛОСКА-КРАПКА У ЦЕНТРІ -->
+    <div id="streak-wrapper" class="flex items-center gap-1.5 px-2 py-1 select-none">
+      <div id="streak-timeline" class="flex items-center">
+        <!-- Генерується через JS: крапки днів та лінії зв'язку -->
+      </div>
+      <span id="streak-count" class="text-[10px] font-mono text-neutral-400 font-medium ml-1">0</span>
+    </div>
+
+    <!-- 3. ДОДАТИ ВИРАЗ (+) -->
+    <button id="open-add-btn" title="Add Expression" class="p-2 text-neutral-300 hover:text-neutral-950 active:scale-90 transition-colors flex items-center justify-center">
+      <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="7" y1="2" x2="7" y2="12" />
+        <line x1="2" y1="7" x2="12" y2="7" />
+      </svg>
     </button>
   </header>
 
   <!-- ================= VIEW 1: PRACTICE ================= -->
-  <main id="view-practice" class="flex-1 flex flex-col justify-between px-6 pb-12 pt-4 relative">
+  <main id="view-practice" class="flex-1 flex flex-col justify-between px-6 pb-8 pt-1 relative max-w-md w-full mx-auto overflow-hidden">
     
-    <!-- Central Card Area -->
-    <div class="flex-1 flex items-center justify-center">
-      <!-- Empty State -->
-      <div id="empty-state" class="hidden text-center max-w-xs">
-        <div class="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center mx-auto mb-3 text-neutral-400">
-          <i data-lucide="check" class="w-4 h-4 stroke-[1.5]"></i>
-        </div>
-        <p class="text-sm font-normal text-neutral-900 mb-1">All caught up</p>
-        <p class="text-xs text-neutral-400 mb-5">No cards due for review right now.</p>
-        <button onclick="openModal()" class="px-5 py-2 rounded-full border border-neutral-900 text-neutral-900 text-xs font-medium active:scale-95 transition-all">
-          + Add Expression
+    <!-- 1. ЗОНА СЦЕНАРІЮ (ГАРМОНІЙНО ВГОРІ) -->
+    <div id="scenario-header" class="w-full flex flex-col items-center text-center pt-1 transition-opacity duration-300">
+      <div class="inline-flex items-center gap-1.5 mb-1 text-neutral-400">
+        <span class="text-[9px] font-mono tracking-widest uppercase">Scenario</span>
+        <button id="btn-refresh-prompt" title="Change scenario" class="p-1 hover:text-neutral-950 active:rotate-180 transition-transform text-neutral-400">
+          <i data-lucide="rotate-cw" class="w-3 h-3 stroke-[1.5]"></i>
         </button>
       </div>
+      <p id="prompt-question" class="text-xs sm:text-sm font-light text-neutral-500 leading-relaxed max-w-xs transition-colors px-2">
+        Loading scenario...
+      </p>
+    </div>
 
-      <!-- Active Practice Card -->
-      <div id="card" class="card-transition w-full max-w-sm flex flex-col items-center text-center">
-        <button id="tts-btn" title="Pronounce" class="text-neutral-400 hover:text-neutral-950 p-2 mb-3 active:scale-90 transition-all">
-          <i data-lucide="volume-2" class="w-4 h-4 stroke-[1.5]"></i>
-        </button>
-
-        <h1 id="card-phrase" class="text-3xl sm:text-4xl font-light text-neutral-950 tracking-tight leading-tight mb-3">
-          ...
-        </h1>
-
-        <p id="card-example" class="text-sm text-neutral-500 font-light leading-relaxed max-w-xs">
-          ...
-        </p>
+    <!-- 2. ЦЕНТРАЛЬНА ЗОНА: 3 СЛОВА З ПРИРОДНИМ ПОВІТРЯМ -->
+    <div id="practice-prompt-card" class="flex-1 flex flex-col justify-center items-center w-full py-2">
+      <div id="target-words-container" class="w-full flex flex-col items-center space-y-7 sm:space-y-8">
+        <!-- 3 вирази -->
       </div>
     </div>
 
-    <!-- Bottom Controls -->
-    <div class="w-full flex flex-col items-center">
-      <!-- Recording Mode with Bending Vector Line -->
-      <div id="record-controls" class="flex flex-col items-center w-full max-w-xs">
-        <div class="w-48 h-10 flex items-center justify-center mb-2 relative">
-          <canvas id="voice-line-canvas" class="w-full h-full"></canvas>
-          <div id="timer-display" class="absolute -top-3 text-[10px] font-mono text-neutral-400 opacity-0 transition-opacity">00:00</div>
-        </div>
+    <!-- 3. ЗОНА РЕФЛЕКСІЇ (ПІСЛЯ ЗАПИСУ) -->
+    <div id="practice-reflection-card" class="hidden flex-1 flex flex-col justify-center items-center w-full py-4 text-center">
+      <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">Self-Reflection</span>
+      <h3 class="text-sm font-medium text-neutral-950 mb-5">Which expressions did you use naturally?</h3>
 
-        <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-neutral-950 flex items-center justify-center active:scale-90 transition-all shadow-md">
-          <div id="record-dot" class="w-2.5 h-2.5 rounded-full bg-red-500 opacity-0 transition-opacity"></div>
+      <div class="w-full bg-white border border-neutral-200/80 rounded-2xl p-4 mb-5 flex items-center gap-3 shadow-sm max-w-xs">
+        <button id="btn-reflection-play" class="w-10 h-10 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-transform flex-shrink-0">
+          <i data-lucide="play" class="w-4 h-4 fill-white"></i>
         </button>
+        <div class="flex-1 text-left min-w-0">
+          <div class="text-xs font-medium text-neutral-900 truncate">Your 1-min thought</div>
+          <div id="reflection-audio-duration" class="text-[10px] font-mono text-neutral-400">00:00</div>
+        </div>
       </div>
 
-      <!-- Review / Grading Mode -->
-      <div id="grade-controls" class="hidden w-full max-w-xs flex items-center justify-between gap-4">
-        <button id="btn-again" class="flex-1 py-3.5 text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-900 transition-colors">
-          ← Hard
-        </button>
+      <div class="w-full space-y-2 mb-6 max-w-xs" id="reflection-chips-container"></div>
 
-        <button id="btn-listen-self" title="Listen to yourself" class="w-12 h-12 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-all flex-shrink-0 shadow-sm">
-          <i data-lucide="play" class="w-4 h-4 fill-white translate-x-0.5"></i>
-        </button>
+      <button id="btn-save-reflection" class="w-full max-w-xs py-3.5 rounded-full bg-neutral-950 text-white text-xs font-mono uppercase tracking-wider active:scale-95 transition-all shadow-sm">
+        Complete & Next →
+      </button>
+    </div>
 
-        <button id="btn-good" class="flex-1 py-3.5 text-xs font-mono uppercase tracking-wider text-neutral-900 font-medium transition-colors">
-          Easy →
-        </button>
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden text-center max-w-xs mx-auto my-auto">
+      <div class="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center mx-auto mb-3 text-neutral-400">
+        <i data-lucide="plus" class="w-4 h-4 stroke-[1.5]"></i>
+      </div>
+      <p class="text-sm font-normal text-neutral-900 mb-1">Add your expressions</p>
+      <p class="text-xs text-neutral-400 mb-5">Save at least 3 expressions to unlock the speech challenge.</p>
+      <button onclick="openModal()" class="px-5 py-2 rounded-full border border-neutral-900 text-neutral-900 text-xs font-medium active:scale-95 transition-all">
+        + Add Expression
+      </button>
+    </div>
+
+    <!-- 4. НИЖНЯ ЗОНА: ЗАПИС -->
+    <div id="bottom-bar" class="w-full flex flex-col items-center">
+      <div id="record-controls" class="flex flex-col items-center w-full max-w-xs">
+        
+        <!-- Хвиля та зворотний відлік -->
+        <div id="visualizer-container" class="h-10 flex flex-col items-center justify-end mb-3 opacity-0 scale-95 pointer-events-none transition-all duration-300">
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span id="timer-display" class="text-[11px] font-mono text-neutral-400">00:00 / 01:00</span>
+          </div>
+          <div class="w-44 h-5 flex items-center justify-center">
+            <canvas id="voice-line-canvas" class="w-full h-full"></canvas>
+          </div>
+        </div>
+
+        <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-all shadow-md"></button>
       </div>
     </div>
 
@@ -159,15 +239,21 @@
     <div id="pull-hint" class="text-center py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition-opacity">
       ↓ Pull down to search
     </div>
-
-    <!-- Clean Swipe-to-Delete List -->
     <div id="dict-list" class="space-y-2.5 pb-12 pt-1"></div>
+  </section>
+
+  <!-- ================= VIEW 3: RECORDINGS ARCHIVE ================= -->
+  <section id="view-recordings" class="hidden flex-1 overflow-y-auto px-6 py-2 max-w-md w-full mx-auto relative overscroll-y-contain">
+    <div class="py-2 mb-1 flex items-center justify-between">
+      <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Spoken Thoughts</span>
+      <span id="rec-count" class="text-[10px] font-mono text-neutral-400">0 notes</span>
+    </div>
+    <div id="recordings-list" class="space-y-2.5 pb-12"></div>
   </section>
 
   <!-- ================= SPOTLIGHT SEARCH OVERLAY ================= -->
   <div id="spotlight-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-200">
     <div id="spotlight-panel" class="w-full max-w-md mx-auto px-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 -translate-y-full">
-      <!-- Суцільна, однорідна за кольором панель -->
       <div class="bg-white rounded-2xl border border-neutral-200/80 shadow-2xl p-2.5 flex items-center gap-3">
         <i data-lucide="search" class="w-4 h-4 text-neutral-400 ml-2 stroke-[1.5] flex-shrink-0"></i>
         <input type="text" id="dict-search" placeholder="Search expressions..." autocomplete="off"
@@ -196,7 +282,7 @@
         </div>
 
         <div>
-          <textarea id="in-example" rows="2" placeholder="Example sentence or context (optional)" autocomplete="off"
+          <textarea id="in-example" rows="2" placeholder="Example context or meaning (optional)" autocomplete="off"
                     class="w-full bg-white px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-light text-neutral-700 placeholder-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors resize-none"></textarea>
         </div>
 
@@ -213,7 +299,7 @@
   <!-- ================= JS ENGINE ================= -->
   <script>
     /* 1. DATABASE LAYER */
-    const DB_NAME = 'vocalize_clean_v6';
+    const DB_NAME = 'vocalize_v9_db';
     let db;
 
     function openDB() {
@@ -223,6 +309,9 @@
           const d = e.target.result;
           if (!d.objectStoreNames.contains('cards')) {
             d.createObjectStore('cards', { keyPath: 'id', autoIncrement: true });
+          }
+          if (!d.objectStoreNames.contains('recordings')) {
+            d.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
           }
         };
         req.onsuccess = () => { db = req.result; resolve(); };
@@ -253,87 +342,300 @@
       });
     }
 
+    async function getRecordings() {
+      return new Promise(res => {
+        const tx = db.transaction('recordings', 'readonly');
+        const req = tx.objectStore('recordings').getAll();
+        req.onsuccess = () => res((req.result || []).reverse());
+      });
+    }
+
+    async function saveRecording(rec) {
+      return new Promise(res => {
+        const tx = db.transaction('recordings', 'readwrite');
+        tx.objectStore('recordings').put(rec);
+        tx.oncomplete = () => res();
+      });
+    }
+
+    async function deleteRecording(id) {
+      return new Promise(res => {
+        const tx = db.transaction('recordings', 'readwrite');
+        tx.objectStore('recordings').delete(id);
+        tx.oncomplete = () => res();
+      });
+    }
+
     async function seedInitial() {
       const cards = await getCards();
       if (cards.length === 0) {
         const defaults = [
           { phrase: "figure out", example: "I need some time to figure this out.", nextDue: 0, reps: 0 },
           { phrase: "cut corners", example: "Never cut corners on product safety.", nextDue: 0, reps: 0 },
-          { phrase: "come up with", example: "We have to come up with a better solution.", nextDue: 0, reps: 0 }
+          { phrase: "come up with", example: "We have to come up with a better solution.", nextDue: 0, reps: 0 },
+          { phrase: "call it a day", example: "Let's finish this task and call it a day.", nextDue: 0, reps: 0 },
+          { phrase: "look into", example: "I will look into this issue tomorrow.", nextDue: 0, reps: 0 },
+          { phrase: "on the same page", example: "Let's make sure everyone is on the same page.", nextDue: 0, reps: 0 }
         ];
         for (let d of defaults) await saveCard(d);
       }
     }
 
-    /* 2. APP STATE */
-    let queue = [];
-    let currentIndex = 0;
+    /* 2. STREAK ENGINE & APP BADGING (PWA) */
+    function getLocalDateStr(d = new Date()) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function calcStreakAndChain(historyList, todayStr) {
+      const history = new Set(historyList);
+      const today = new Date(todayStr);
+      
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dStr = getLocalDateStr(d);
+        days.push({
+          date: dStr,
+          is_today: (i === 0),
+          completed: history.has(dStr)
+        });
+      }
+
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = getLocalDateStr(yesterday);
+
+      let streak = 0;
+      if (history.has(todayStr)) {
+        let cur = new Date(today);
+        while (history.has(getLocalDateStr(cur))) {
+          streak++;
+          cur.setDate(cur.getDate() - 1);
+        }
+      } else if (history.has(yesterdayStr)) {
+        let cur = new Date(yesterday);
+        while (history.has(getLocalDateStr(cur))) {
+          streak++;
+          cur.setDate(cur.getDate() - 1);
+        }
+      } else {
+        streak = 0;
+      }
+
+      return { days, streak };
+    }
+
+    function updatePwaBadge(isDoneToday) {
+      if ('setAppBadge' in navigator) {
+        if (!isDoneToday) {
+          navigator.setAppBadge(1).catch(() => {});
+        } else {
+          navigator.clearAppBadge().catch(() => {});
+        }
+      }
+    }
+
+    function renderStreak() {
+      const history = JSON.parse(localStorage.getItem('vocalize_streak_history') || '[]');
+      const todayStr = getLocalDateStr();
+      const { days, streak } = calcStreakAndChain(history, todayStr);
+      const isDoneToday = history.includes(todayStr);
+
+      const container = document.getElementById('streak-timeline');
+      const countEl = document.getElementById('streak-count');
+      countEl.textContent = streak;
+
+      let html = '';
+      for (let i = 0; i < days.length; i++) {
+        const d = days[i];
+        
+        // Крапка дня
+        if (d.completed) {
+          html += `<span class="w-1.5 h-1.5 rounded-full bg-neutral-950 transition-colors" title="${d.date}"></span>`;
+        } else if (d.is_today) {
+          html += `<span class="w-1.5 h-1.5 rounded-full border border-neutral-400 animate-pulse" title="Today (pending)"></span>`;
+        } else {
+          html += `<span class="w-1.5 h-1.5 rounded-full bg-neutral-200 transition-colors" title="${d.date}"></span>`;
+        }
+
+        // Полоска зв'язку з наступним днем
+        if (i < days.length - 1) {
+          const next = days[i + 1];
+          const isConnected = d.completed && next.completed;
+          html += `<span class="w-2.5 h-[1.2px] ${isConnected ? 'bg-neutral-950' : 'bg-neutral-200/80'} transition-colors"></span>`;
+        }
+      }
+
+      container.innerHTML = html;
+      updatePwaBadge(isDoneToday);
+    }
+
+    function markDayCompleted() {
+      const history = JSON.parse(localStorage.getItem('vocalize_streak_history') || '[]');
+      const todayStr = getLocalDateStr();
+      if (!history.includes(todayStr)) {
+        history.push(todayStr);
+        localStorage.setItem('vocalize_streak_history', JSON.stringify(history));
+      }
+      renderStreak();
+    }
+
+    /* 3. SCENARIOS POOL */
+    const PROMPTS = [
+      "What is something in your industry or daily routine that people overcomplicate?",
+      "Describe a project or work situation that went sideways and how you reacted.",
+      "How would you handle a colleague who constantly misses deadlines without excuses?",
+      "Talk about a tough decision you made recently where there was no perfect choice.",
+      "Describe a time you took a calculated risk: what was at stake and what happened?",
+      "How do you usually explain a complex technical problem to a non-technical person?",
+      "Talk about a habit or commitment you had to drop recently to protect your energy.",
+      "Describe a situation where a quick shortcut ended up causing a much bigger problem."
+    ];
+
+    /* 4. APP STATE */
+    let currentTriad = [];
+    let currentPrompt = "";
     let isRecording = false;
     let mediaRecorder = null;
     let audioContext = null;
     let analyser = null;
     let animFrameId = null;
     let recordedChunks = [];
+    let lastAudioBlob = null;
     let lastAudioUrl = null;
     let timerInterval = null;
     let startTime = 0;
+    let chimePlayed = false;
+    let wakeLock = null;
+    let usedWordsMap = {};
 
-    async function initQueue() {
+    function getRandomPrompt() {
+      return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+    }
+
+    async function initPracticeSession() {
       const all = await getCards();
-      const now = Date.now();
-      queue = all.filter(c => (c.nextDue || 0) <= now);
-      if (queue.length === 0 && all.length > 0) {
-        queue = [all[Math.floor(Math.random() * all.length)]];
-      }
-      currentIndex = 0;
-      updateUI();
-      updateBadges(all.length, queue.length);
-    }
+      const emptyState = document.getElementById('empty-state');
+      const promptCard = document.getElementById('practice-prompt-card');
+      const reflectionCard = document.getElementById('practice-reflection-card');
+      const scenarioHeader = document.getElementById('scenario-header');
+      const bottomBar = document.getElementById('bottom-bar');
 
-    function updateBadges(total, due) {
-      document.getElementById('dict-badge').textContent = total;
-      document.getElementById('queue-badge').textContent = due;
-    }
-
-    function updateUI() {
-      const empty = document.getElementById('empty-state');
-      const card = document.getElementById('card');
-
-      if (queue.length === 0 || currentIndex >= queue.length) {
-        empty.classList.remove('hidden');
-        card.classList.add('hidden');
-        document.getElementById('record-controls').classList.add('hidden');
-        document.getElementById('grade-controls').classList.add('hidden');
+      if (all.length < 3) {
+        emptyState.classList.remove('hidden');
+        promptCard.classList.add('hidden');
+        reflectionCard.classList.add('hidden');
+        scenarioHeader.classList.add('hidden');
+        bottomBar.classList.add('hidden');
         return;
       }
 
-      empty.classList.add('hidden');
-      card.classList.remove('hidden');
-      document.getElementById('record-controls').classList.remove('hidden');
-      document.getElementById('grade-controls').classList.add('hidden');
+      emptyState.classList.add('hidden');
+      promptCard.classList.remove('hidden');
+      reflectionCard.classList.add('hidden');
+      scenarioHeader.classList.remove('hidden');
+      bottomBar.classList.remove('hidden');
 
-      const current = queue[currentIndex];
-      document.getElementById('card-phrase').textContent = current.phrase;
-      document.getElementById('card-example').textContent = current.example ? `“${current.example}”` : '';
+      const sorted = [...all].sort((a, b) => (a.nextDue || 0) - (b.nextDue || 0));
+      currentTriad = sorted.slice(0, 3);
+      currentPrompt = getRandomPrompt();
+
+      document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
+
+      // Генерація 3 слів з ідеальним ритмом і простором
+      const container = document.getElementById('target-words-container');
+      container.innerHTML = '';
+      currentTriad.forEach(card => {
+        const item = document.createElement('div');
+        item.className = "flex flex-col items-center text-center";
+        item.innerHTML = `
+          <h2 class="practice-word-phrase text-3xl sm:text-4xl font-light text-neutral-950 tracking-tight leading-none transition-colors">
+            ${card.phrase}
+          </h2>
+          ${card.example ? `<p class="practice-word-example text-xs text-neutral-400 font-light mt-2 leading-relaxed max-w-[260px] transition-colors">${card.example}</p>` : ''}
+        `;
+        container.appendChild(item);
+      });
 
       resetMicState();
     }
 
-    function resetMicState() {
-      isRecording = false;
-      const btn = document.getElementById('mic-toggle-btn');
-      const dot = document.getElementById('record-dot');
-      btn.classList.remove('scale-105');
-      dot.classList.add('opacity-0');
-      document.getElementById('timer-display').classList.add('opacity-0');
-      clearInterval(timerInterval);
-      cancelAnimationFrame(animFrameId);
-      drawIdleLine();
+    document.getElementById('btn-refresh-prompt').addEventListener('click', () => {
+      if (isRecording) return;
+      currentPrompt = getRandomPrompt();
+      document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
+    });
+
+    /* 5. OLED THEME & SCREEN WAKE LOCK */
+    const metaThemeColor = document.getElementById('meta-theme-color');
+
+    function enableOledMode() {
+      document.documentElement.classList.add('oled-mode');
+      document.body.classList.add('oled-mode');
+      if (metaThemeColor) metaThemeColor.setAttribute('content', '#000000');
     }
 
-    /* 3. VECTOR BENDING LINE OSCILLOSCOPE */
+    function disableOledMode() {
+      document.documentElement.classList.remove('oled-mode');
+      document.body.classList.remove('oled-mode');
+      if (metaThemeColor) metaThemeColor.setAttribute('content', '#FAFAFA');
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => { wakeLock = null; });
+        }
+      } catch (err) {}
+    }
+
+    async function releaseWakeLock() {
+      if (wakeLock !== null) {
+        try { await wakeLock.release(); } catch (err) {}
+        wakeLock = null;
+      }
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+      if (wakeLock !== null && document.visibilityState === 'visible' && isRecording) {
+        await requestWakeLock();
+      }
+    });
+
+    /* 6. SOUND CHIME AT 45s */
+    function play45sChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.18, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.45);
+      } catch (e) {}
+    }
+
+    /* 7. VOICE BARS VISUALIZER */
     const lineCanvas = document.getElementById('voice-line-canvas');
     const ctx = lineCanvas.getContext('2d');
+    const BAR_COUNT = 18;
+    const smoothHeights = new Array(BAR_COUNT).fill(2.5);
 
     function resizeCanvas() {
       const rect = lineCanvas.getBoundingClientRect();
@@ -341,32 +643,23 @@
       lineCanvas.width = rect.width * dpr;
       lineCanvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
-      if (!isRecording) drawIdleLine();
+      if (!isRecording) clearCanvas();
     }
     window.addEventListener('resize', resizeCanvas);
 
-    function drawIdleLine() {
+    function clearCanvas() {
       const width = lineCanvas.width / (window.devicePixelRatio || 1);
       const height = lineCanvas.height / (window.devicePixelRatio || 1);
-      const centerY = height / 2;
-
       ctx.clearRect(0, 0, width, height);
-      ctx.beginPath();
-      ctx.strokeStyle = '#E5E5E5';
-      ctx.lineWidth = 1.25;
-      ctx.lineCap = 'round';
-      ctx.moveTo(8, centerY);
-      ctx.lineTo(width - 8, centerY);
-      ctx.stroke();
     }
 
-    function renderBendingLine() {
+    function renderAudioBars() {
       if (!isRecording) return;
-      animFrameId = requestAnimationFrame(renderBendingLine);
+      animFrameId = requestAnimationFrame(renderAudioBars);
 
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
-      analyser.getByteTimeDomainData(dataArray);
+      analyser.getByteFrequencyData(dataArray);
 
       const width = lineCanvas.width / (window.devicePixelRatio || 1);
       const height = lineCanvas.height / (window.devicePixelRatio || 1);
@@ -374,41 +667,52 @@
 
       ctx.clearRect(0, 0, width, height);
 
-      const pointsCount = 36;
-      const sliceWidth = (width - 16) / (pointsCount - 1);
-      const step = Math.floor(bufferLength / pointsCount) || 1;
-      const points = [];
+      const barWidth = 2.5;
+      const barGap = 4;
+      const totalWidth = BAR_COUNT * barWidth + (BAR_COUNT - 1) * barGap;
+      const startX = (width - totalWidth) / 2;
+      const maxHeight = height * 0.9;
 
-      for (let i = 0; i < pointsCount; i++) {
-        const val = (dataArray[i * step] - 128) / 128.0;
-        const envelope = Math.sin(Math.PI * (i / (pointsCount - 1)));
-        const yOffset = val * (height * 0.42) * envelope;
-        
-        points.push({
-          x: 8 + i * sliceWidth,
-          y: centerY + yOffset
-        });
+      ctx.fillStyle = isRecording ? '#FFFFFF' : '#171717';
+
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const binIndex = Math.min(Math.floor((i + 1) * 1.5), bufferLength - 1);
+        const amplitude = dataArray[binIndex] / 255.0;
+        const targetH = Math.max(2.5, amplitude * maxHeight);
+        smoothHeights[i] += (targetH - smoothHeights[i]) * 0.28;
+
+        const currentH = smoothHeights[i];
+        const x = startX + i * (barWidth + barGap);
+        const y = centerY - currentH / 2;
+
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(x, y, barWidth, currentH, barWidth / 2);
+        } else {
+          ctx.rect(x, y, barWidth, currentH);
+        }
+        ctx.fill();
       }
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#171717';
-      ctx.lineWidth = 1.25;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length - 1; i++) {
-        const xc = (points[i].x + points[i + 1].x) / 2;
-        const yc = (points[i].y + points[i + 1].y) / 2;
-        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-      }
-      ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-      ctx.stroke();
     }
 
-    /* 4. AUDIO RECORDING */
+    function resetMicState() {
+      isRecording = false;
+      const visualizer = document.getElementById('visualizer-container');
+      if (visualizer) {
+        visualizer.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        visualizer.classList.remove('opacity-100', 'scale-100');
+      }
+      document.getElementById('timer-display').textContent = '00:00 / 01:00';
+      clearInterval(timerInterval);
+      cancelAnimationFrame(animFrameId);
+      clearCanvas();
+      releaseWakeLock();
+      disableOledMode();
+    }
+
+    /* 8. RECORDING (1-MIN LIMIT & AUTO-STOP) */
     const micBtn = document.getElementById('mic-toggle-btn');
-    const dot = document.getElementById('record-dot');
+    const visualizer = document.getElementById('visualizer-container');
     const timerDisplay = document.getElementById('timer-display');
 
     micBtn.addEventListener('click', async () => {
@@ -418,120 +722,313 @@
           
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
           analyser = audioContext.createAnalyser();
-          analyser.fftSize = 1024;
+          analyser.fftSize = 128;
+          analyser.smoothingTimeConstant = 0.75;
           const source = audioContext.createMediaStreamSource(stream);
           source.connect(analyser);
 
           mediaRecorder = new MediaRecorder(stream);
           recordedChunks = [];
+          chimePlayed = false;
+
           mediaRecorder.ondataavailable = e => e.data.size > 0 && recordedChunks.push(e.data);
+          
           mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-            lastAudioUrl = URL.createObjectURL(blob);
+            lastAudioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            lastAudioUrl = URL.createObjectURL(lastAudioBlob);
+
             stream.getTracks().forEach(t => t.stop());
             if (audioContext && audioContext.state !== 'closed') audioContext.close();
+
+            disableOledMode();
+            openReflectionView();
           };
 
           mediaRecorder.start();
           isRecording = true;
 
-          micBtn.classList.add('scale-105');
-          dot.classList.remove('opacity-0');
-          renderBendingLine();
+          enableOledMode();
+          await requestWakeLock();
+
+          visualizer.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+          visualizer.classList.add('opacity-100', 'scale-100');
+
+          renderAudioBars();
 
           startTime = Date.now();
-          timerDisplay.classList.remove('opacity-0');
           timerInterval = setInterval(() => {
-            const s = Math.floor((Date.now() - startTime) / 1000);
-            timerDisplay.textContent = `00:${String(s).padStart(2, '0')}`;
-          }, 500);
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const seconds = Math.min(60, elapsed);
+            timerDisplay.textContent = `00:${String(seconds).padStart(2, '0')} / 01:00`;
+
+            if (seconds >= 45 && !chimePlayed) {
+              play45sChime();
+              chimePlayed = true;
+            }
+
+            if (elapsed >= 60) {
+              stopRecordingSession();
+            }
+          }, 350);
 
         } catch (e) {
           alert('Microphone access is required.');
+          disableOledMode();
         }
       } else {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        clearInterval(timerInterval);
-        cancelAnimationFrame(animFrameId);
-        isRecording = false;
-
-        document.getElementById('record-controls').classList.add('hidden');
-        document.getElementById('grade-controls').classList.remove('hidden');
-        document.getElementById('grade-controls').classList.add('flex');
+        stopRecordingSession();
       }
     });
 
-    /* 5. GRADING */
-    async function handleGrade(success) {
-      const current = queue[currentIndex];
-      const cardEl = document.getElementById('card');
-
-      cardEl.style.transform = success ? 'translateX(30px)' : 'translateX(-30px)';
-      cardEl.style.opacity = '0';
-
-      if (success) {
-        current.reps = (current.reps || 0) + 1;
-        current.nextDue = Date.now() + (current.reps === 1 ? 24 : current.reps * 48) * 3600 * 1000;
-      } else {
-        current.reps = 0;
-        current.nextDue = Date.now() + 10 * 60 * 1000;
+    function stopRecordingSession() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
       }
-      await saveCard(current);
-
-      setTimeout(() => {
-        currentIndex++;
-        cardEl.style.transform = 'translateX(0)';
-        cardEl.style.opacity = '1';
-        updateUI();
-      }, 180);
+      resetMicState();
     }
 
-    document.getElementById('btn-again').addEventListener('click', () => handleGrade(false));
-    document.getElementById('btn-good').addEventListener('click', () => handleGrade(true));
+    /* 9. REFLECTION & SAVE */
+    let reflectionAudio = null;
 
-    document.getElementById('btn-listen-self').addEventListener('click', () => {
-      if (lastAudioUrl) new Audio(lastAudioUrl).play();
-    });
+    function openReflectionView() {
+      document.getElementById('scenario-header').classList.add('hidden');
+      document.getElementById('practice-prompt-card').classList.add('hidden');
+      document.getElementById('bottom-bar').classList.add('hidden');
 
-    document.getElementById('tts-btn').addEventListener('click', () => {
-      const current = queue[currentIndex];
-      if (current && 'speechSynthesis' in window) {
-        const u = new SpeechSynthesisUtterance(current.phrase);
-        u.lang = 'en-US';
-        u.rate = 0.9;
-        speechSynthesis.speak(u);
+      const reflectionCard = document.getElementById('practice-reflection-card');
+      reflectionCard.classList.remove('hidden');
+
+      const durationSec = Math.max(1, Math.min(60, Math.floor((Date.now() - startTime) / 1000)));
+      document.getElementById('reflection-audio-duration').textContent = `00:${String(durationSec).padStart(2, '0')}`;
+
+      if (reflectionAudio) reflectionAudio.pause();
+      reflectionAudio = new Audio(lastAudioUrl);
+      const playBtn = document.getElementById('btn-reflection-play');
+      playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white"></i>`;
+      lucide.createIcons();
+
+      playBtn.onclick = () => {
+        if (reflectionAudio.paused) {
+          reflectionAudio.play();
+          playBtn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5 fill-white"></i>`;
+          reflectionAudio.onended = () => {
+            playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white"></i>`;
+            lucide.createIcons();
+          };
+        } else {
+          reflectionAudio.pause();
+          playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white"></i>`;
+        }
+        lucide.createIcons();
+      };
+
+      usedWordsMap = {};
+      const chipsContainer = document.getElementById('reflection-chips-container');
+      chipsContainer.innerHTML = '';
+
+      currentTriad.forEach(card => {
+        usedWordsMap[card.id] = false;
+
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = "w-full py-3 px-4 rounded-2xl border border-neutral-200/80 bg-white flex items-center justify-between text-left transition-all active:scale-98 select-none";
+        
+        chip.innerHTML = `
+          <div class="text-sm font-medium text-neutral-800">${card.phrase}</div>
+          <div class="w-5 h-5 rounded-full border border-neutral-300 flex items-center justify-center transition-colors check-circle">
+            <i data-lucide="check" class="w-3 h-3 text-white hidden"></i>
+          </div>
+        `;
+
+        chip.addEventListener('click', () => {
+          usedWordsMap[card.id] = !usedWordsMap[card.id];
+          const isUsed = usedWordsMap[card.id];
+          const circle = chip.querySelector('.check-circle');
+          const checkIcon = chip.querySelector('[data-lucide="check"]');
+
+          if (isUsed) {
+            chip.classList.add('border-neutral-950', 'bg-neutral-50/50');
+            circle.classList.add('bg-neutral-950', 'border-neutral-950');
+            checkIcon.classList.remove('hidden');
+          } else {
+            chip.classList.remove('border-neutral-950', 'bg-neutral-50/50');
+            circle.classList.remove('bg-neutral-950', 'border-neutral-950');
+            checkIcon.classList.add('hidden');
+          }
+          lucide.createIcons();
+        });
+
+        chipsContainer.appendChild(chip);
+      });
+
+      lucide.createIcons();
+    }
+
+    document.getElementById('btn-save-reflection').addEventListener('click', async () => {
+      if (reflectionAudio) reflectionAudio.pause();
+
+      const durationSec = Math.max(1, Math.min(60, Math.floor((Date.now() - startTime) / 1000)));
+
+      for (let card of currentTriad) {
+        const wasUsed = usedWordsMap[card.id];
+        if (wasUsed) {
+          card.reps = (card.reps || 0) + 1;
+          card.nextDue = Date.now() + (card.reps === 1 ? 24 : card.reps * 48) * 3600 * 1000;
+        } else {
+          card.reps = 0;
+          card.nextDue = Date.now() + 10 * 60 * 1000;
+        }
+        await saveCard(card);
       }
+
+      await saveRecording({
+        prompt: currentPrompt,
+        triadPhrases: currentTriad.map(c => ({ phrase: c.phrase, used: usedWordsMap[c.id] })),
+        date: Date.now(),
+        blob: lastAudioBlob,
+        duration: durationSec
+      });
+
+      // Фіксуємо виконання практики для стріку та бейджика
+      markDayCompleted();
+
+      await initPracticeSession();
     });
 
-    /* 6. NAVIGATION */
+    /* 10. NAVIGATION */
     const tabPracticeBtn = document.getElementById('tab-practice-btn');
     const tabDictBtn = document.getElementById('tab-dictionary-btn');
+    const tabRecordingsBtn = document.getElementById('tab-recordings-btn');
+
     const viewPractice = document.getElementById('view-practice');
     const viewDictionary = document.getElementById('view-dictionary');
+    const viewRecordings = document.getElementById('view-recordings');
+
+    const tabActiveStyle = "p-2 text-neutral-950 transition-colors active:scale-90 flex items-center justify-center";
+    const tabInactiveStyle = "p-2 text-neutral-300 hover:text-neutral-950 transition-colors active:scale-90 flex items-center justify-center";
 
     function switchTab(tab) {
+      tabPracticeBtn.className = tabInactiveStyle;
+      tabDictBtn.className = tabInactiveStyle;
+      tabRecordingsBtn.className = tabInactiveStyle;
+
+      viewPractice.classList.add('hidden');
+      viewDictionary.classList.add('hidden');
+      viewRecordings.classList.add('hidden');
+
       if (tab === 'practice') {
         viewPractice.classList.remove('hidden');
-        viewDictionary.classList.add('hidden');
-
-        tabPracticeBtn.className = "text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors";
-        tabDictBtn.className = "text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors";
+        tabPracticeBtn.className = tabActiveStyle;
         setTimeout(resizeCanvas, 50);
-      } else {
-        viewPractice.classList.add('hidden');
+      } else if (tab === 'dictionary') {
         viewDictionary.classList.remove('hidden');
-
-        tabDictBtn.className = "text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors";
-        tabPracticeBtn.className = "text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors";
-
+        tabDictBtn.className = tabActiveStyle;
         renderDictionary();
+      } else if (tab === 'recordings') {
+        viewRecordings.classList.remove('hidden');
+        tabRecordingsBtn.className = tabActiveStyle;
+        renderRecordings();
       }
     }
 
     tabPracticeBtn.addEventListener('click', () => switchTab('practice'));
     tabDictBtn.addEventListener('click', () => switchTab('dictionary'));
+    tabRecordingsBtn.addEventListener('click', () => switchTab('recordings'));
 
-    /* 7. DICTIONARY & CLEAN SWIPE-TO-DELETE */
+    /* 11. RECORDINGS ARCHIVE (SOLID SQUARE) */
+    const recordingsList = document.getElementById('recordings-list');
+    let activePlayerAudio = null;
+    let activePlayId = null;
+
+    async function renderRecordings() {
+      const list = await getRecordings();
+      document.getElementById('rec-count').textContent = `${list.length} thoughts`;
+      recordingsList.innerHTML = '';
+
+      if (list.length === 0) {
+        recordingsList.innerHTML = `<div class="py-16 text-center text-xs font-mono text-neutral-400">No spoken thoughts yet</div>`;
+        return;
+      }
+
+      list.forEach(rec => {
+        const item = document.createElement('div');
+        item.className = "bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-sm select-none";
+        
+        const dateStr = formatRecDate(rec.date);
+        const isPlayingThis = activePlayId === rec.id;
+
+        const chipsHtml = (rec.triadPhrases || []).map(p => `
+          <span class="text-[9px] font-mono px-2 py-0.5 rounded-md ${p.used ? 'bg-neutral-950 text-white' : 'border border-neutral-200 text-neutral-400'}">
+            ${p.phrase} ${p.used ? '✓' : ''}
+          </span>
+        `).join('');
+
+        item.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-2.5">
+            <h4 class="text-xs font-medium text-neutral-950 leading-snug flex-1">${rec.prompt || 'Spoken Reflection'}</h4>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button class="play-rec-btn w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-transform" data-id="${rec.id}">
+                <i data-lucide="${isPlayingThis ? 'square' : 'play'}" class="w-3.5 h-3.5 fill-white"></i>
+              </button>
+              <button class="del-rec-btn p-1.5 text-neutral-300 hover:text-red-500 active:scale-90 transition-colors" data-id="${rec.id}">
+                <i data-lucide="trash-2" class="w-4 h-4 stroke-[1.5]"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 mb-2.5">
+            ${chipsHtml}
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] font-mono text-neutral-400 pt-1 border-t border-neutral-100">
+            <span>${dateStr}</span>
+            <span>${rec.duration}s</span>
+          </div>
+        `;
+
+        recordingsList.appendChild(item);
+
+        item.querySelector('.play-rec-btn').addEventListener('click', () => {
+          if (activePlayId === rec.id) {
+            if (activePlayerAudio) activePlayerAudio.pause();
+            activePlayId = null;
+            renderRecordings();
+          } else {
+            if (activePlayerAudio) activePlayerAudio.pause();
+            const url = URL.createObjectURL(rec.blob);
+            activePlayerAudio = new Audio(url);
+            activePlayId = rec.id;
+            activePlayerAudio.play();
+            activePlayerAudio.onended = () => {
+              activePlayId = null;
+              renderRecordings();
+            };
+            renderRecordings();
+          }
+        });
+
+        item.querySelector('.del-rec-btn').addEventListener('click', async () => {
+          if (activePlayId === rec.id && activePlayerAudio) {
+            activePlayerAudio.pause();
+            activePlayId = null;
+          }
+          await deleteRecording(rec.id);
+          renderRecordings();
+        });
+      });
+
+      lucide.createIcons();
+    }
+
+    function formatRecDate(ts) {
+      const d = new Date(ts);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return isToday ? `Today, ${time}` : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
+    }
+
+    /* 12. DICTIONARY & CLEAN SWIPE-TO-DELETE */
     const dictList = document.getElementById('dict-list');
     let currentlySwipedRow = null;
 
@@ -568,10 +1065,6 @@
               </div>
               ${card.example ? `<p class="text-xs text-neutral-500 font-light truncate mt-0.5">${card.example}</p>` : ''}
             </div>
-
-            <button class="tts-dict-btn p-2 text-neutral-300 hover:text-neutral-900 active:scale-90 transition-all flex-shrink-0" data-phrase="${card.phrase}">
-              <i data-lucide="volume-2" class="w-4 h-4 stroke-[1.5]"></i>
-            </button>
           </div>
         `;
 
@@ -580,16 +1073,6 @@
       });
 
       lucide.createIcons();
-
-      dictList.querySelectorAll('.tts-dict-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const phrase = btn.dataset.phrase;
-          const u = new SpeechSynthesisUtterance(phrase);
-          u.lang = 'en-US';
-          speechSynthesis.speak(u);
-        });
-      });
     }
 
     function initSwipeGesture(cardContent, deleteBtn, cardId) {
@@ -650,10 +1133,8 @@
 
           setTimeout(async () => {
             await deleteCard(cardId);
-            const allCards = await getCards();
-            updateBadges(allCards.length, queue.length);
             await renderDictionary(document.getElementById('dict-search').value);
-            await initQueue();
+            await initPracticeSession();
           }, 180);
         }, 120);
       });
@@ -666,7 +1147,7 @@
       }
     });
 
-    /* ================= 8. SPOTLIGHT SEARCH (WITH SWIPE UP TO CLOSE) ================= */
+    /* 13. SPOTLIGHT SEARCH */
     const spotlightOverlay = document.getElementById('spotlight-overlay');
     const spotlightPanel = document.getElementById('spotlight-panel');
     const dictSearch = document.getElementById('dict-search');
@@ -702,7 +1183,6 @@
       renderDictionary(e.target.value);
     });
 
-    // Свайп вгору для закриття Spotlight
     let spotTouchStartY = 0;
     spotlightOverlay.addEventListener('touchstart', (e) => {
       spotTouchStartY = e.touches[0].clientY;
@@ -710,20 +1190,13 @@
 
     spotlightOverlay.addEventListener('touchmove', (e) => {
       const diffY = e.touches[0].clientY - spotTouchStartY;
-      // Свайп вгору на 25px або більше закриває пошук
-      if (diffY < -25) {
-        closeSpotlight();
-      }
+      if (diffY < -25) closeSpotlight();
     }, { passive: true });
 
-    // Свайп вниз у словнику для відкриття Spotlight
     let pullStartY = 0;
     viewDictionary.addEventListener('touchstart', (e) => {
-      if (viewDictionary.scrollTop <= 0) {
-        pullStartY = e.touches[0].clientY;
-      } else {
-        pullStartY = 0;
-      }
+      if (viewDictionary.scrollTop <= 0) pullStartY = e.touches[0].clientY;
+      else pullStartY = 0;
     }, { passive: true });
 
     viewDictionary.addEventListener('touchmove', (e) => {
@@ -736,7 +1209,7 @@
       }
     }, { passive: true });
 
-    /* 9. MODAL ADD */
+    /* 14. ADD EXPRESSION MODAL */
     const modal = document.getElementById('add-modal');
     const inPhrase = document.getElementById('in-phrase');
     const inExample = document.getElementById('in-example');
@@ -765,17 +1238,18 @@
       await saveCard({ phrase, example, nextDue: 0, reps: 0 });
       e.target.reset();
       closeModal();
-      await initQueue();
+      await initPracticeSession();
       if (!viewDictionary.classList.contains('hidden')) {
         renderDictionary();
       }
     });
 
-    /* 10. BOOTSTRAP */
+    /* 15. BOOTSTRAP */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDB();
       await seedInitial();
-      await initQueue();
+      renderStreak();
+      await initPracticeSession();
       resizeCanvas();
       lucide.createIcons();
 
