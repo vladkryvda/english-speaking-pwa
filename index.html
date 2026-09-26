@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>Vocalize</title>
+  
+  <!-- PWA & Apple Meta Tags -->
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Vocalize">
+  <meta name="theme-color" content="#FAFAFA">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -41,7 +51,6 @@
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* iOS Spotlight Reveal */
     #spotlight-panel {
       transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
     }
@@ -49,7 +58,7 @@
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col justify-between">
 
-  <!-- MINIMAL HEADER: Clean typographic bar -->
+  <!-- MINIMAL HEADER -->
   <header class="w-full px-6 pt-3 pb-3 flex justify-between items-center z-20">
     <nav class="flex items-center gap-5">
       <button id="tab-practice-btn" class="text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors">
@@ -68,6 +77,7 @@
   <!-- ================= VIEW 1: PRACTICE ================= -->
   <main id="view-practice" class="flex-1 flex flex-col justify-between px-6 pb-12 pt-4 relative">
     
+    <!-- Central Card Area -->
     <div class="flex-1 flex items-center justify-center">
       <!-- Empty State -->
       <div id="empty-state" class="hidden text-center max-w-xs">
@@ -97,22 +107,31 @@
       </div>
     </div>
 
-    <!-- Controls -->
+    <!-- Bottom Controls Area -->
     <div class="w-full flex flex-col items-center">
-      <!-- Recording Mode: Solid Black Circle -->
-      <div id="record-controls" class="flex flex-col items-center">
-        <div id="timer-display" class="text-[11px] font-mono text-neutral-400 mb-3 opacity-0 transition-opacity">00:00</div>
+      
+      <!-- 1. RECORDING MODE WITH BENDING VECTOR LINE -->
+      <div id="record-controls" class="flex flex-col items-center w-full max-w-xs">
+        
+        <!-- Bending Line Indicator Canvas -->
+        <div class="w-48 h-10 flex items-center justify-center mb-2 relative">
+          <canvas id="voice-line-canvas" class="w-full h-full"></canvas>
+          <div id="timer-display" class="absolute -top-3 text-[10px] font-mono text-neutral-400 opacity-0 transition-opacity">00:00</div>
+        </div>
+
+        <!-- Solid Black Action Circle -->
         <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-neutral-950 flex items-center justify-center active:scale-90 transition-all shadow-md">
           <div id="record-dot" class="w-2.5 h-2.5 rounded-full bg-red-500 opacity-0 transition-opacity"></div>
         </button>
       </div>
 
-      <!-- Grading Mode -->
+      <!-- 2. REVIEW & GRADING MODE -->
       <div id="grade-controls" class="hidden w-full max-w-xs flex items-center justify-between gap-4">
         <button id="btn-again" class="flex-1 py-3.5 text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-900 transition-colors">
           ← Hard
         </button>
 
+        <!-- Solid Black Play Circle -->
         <button id="btn-listen-self" title="Listen to yourself" class="w-12 h-12 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-all flex-shrink-0 shadow-sm">
           <i data-lucide="play" class="w-4 h-4 fill-white translate-x-0.5"></i>
         </button>
@@ -121,22 +140,19 @@
           Easy →
         </button>
       </div>
+
     </div>
 
   </main>
 
   <!-- ================= VIEW 2: DICTIONARY ================= -->
   <section id="view-dictionary" class="hidden flex-1 overflow-y-auto px-6 py-2 max-w-md w-full mx-auto relative overscroll-y-contain">
-    
-    <!-- Pull-down hint -->
     <div id="pull-hint" class="text-center py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition-opacity">
       ↓ Pull down to search
     </div>
 
-    <!-- Cards List with Apple Swipe-to-Delete -->
-    <div id="dict-list" class="space-y-2.5 pb-12 pt-1">
-      <!-- Injected via JS -->
-    </div>
+    <!-- Clean Swipe-to-Delete List -->
+    <div id="dict-list" class="space-y-2.5 pb-12 pt-1"></div>
   </section>
 
   <!-- ================= SPOTLIGHT SEARCH OVERLAY ================= -->
@@ -184,9 +200,10 @@
     </div>
   </div>
 
-  <!-- ================= JAVASCRIPT ================= -->
+  <!-- ================= JS ENGINE ================= -->
   <script>
-    const DB_NAME = 'vocalize_db_en';
+    /* 1. DATABASE (LOCAL-FIRST) */
+    const DB_NAME = 'vocalize_clean_v5';
     let db;
 
     function openDB() {
@@ -238,11 +255,14 @@
       }
     }
 
-    /* Queue & State */
+    /* 2. APP STATE */
     let queue = [];
     let currentIndex = 0;
     let isRecording = false;
     let mediaRecorder = null;
+    let audioContext = null;
+    let analyser = null;
+    let animFrameId = null;
     let recordedChunks = [];
     let lastAudioUrl = null;
     let timerInterval = null;
@@ -297,9 +317,90 @@
       dot.classList.add('opacity-0');
       document.getElementById('timer-display').classList.add('opacity-0');
       clearInterval(timerInterval);
+      cancelAnimationFrame(animFrameId);
+      drawIdleLine();
     }
 
-    /* Audio Recording */
+    /* 3. VECTOR BENDING LINE OSCILLOSCOPE */
+    const lineCanvas = document.getElementById('voice-line-canvas');
+    const ctx = lineCanvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = lineCanvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      lineCanvas.width = rect.width * dpr;
+      lineCanvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      if (!isRecording) drawIdleLine();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Flat resting hairline
+    function drawIdleLine() {
+      const width = lineCanvas.width / (window.devicePixelRatio || 1);
+      const height = lineCanvas.height / (window.devicePixelRatio || 1);
+      const centerY = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.beginPath();
+      ctx.strokeStyle = '#E5E5E5';
+      ctx.lineWidth = 1.25;
+      ctx.lineCap = 'round';
+      ctx.moveTo(8, centerY);
+      ctx.lineTo(width - 8, centerY);
+      ctx.stroke();
+    }
+
+    // Dynamic bending line using Web Audio Time-Domain Data
+    function renderBendingLine() {
+      if (!isRecording) return;
+      animFrameId = requestAnimationFrame(renderBendingLine);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteTimeDomainData(dataArray);
+
+      const width = lineCanvas.width / (window.devicePixelRatio || 1);
+      const height = lineCanvas.height / (window.devicePixelRatio || 1);
+      const centerY = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const pointsCount = 36;
+      const sliceWidth = (width - 16) / (pointsCount - 1);
+      const step = Math.floor(bufferLength / pointsCount) || 1;
+      const points = [];
+
+      for (let i = 0; i < pointsCount; i++) {
+        const val = (dataArray[i * step] - 128) / 128.0;
+        // Edge dampening window (Hanning curve so endpoints anchor to center)
+        const envelope = Math.sin(Math.PI * (i / (pointsCount - 1)));
+        const yOffset = val * (height * 0.42) * envelope;
+        
+        points.push({
+          x: 8 + i * sliceWidth,
+          y: centerY + yOffset
+        });
+      }
+
+      // Render smooth vector curve
+      ctx.beginPath();
+      ctx.strokeStyle = '#171717';
+      ctx.lineWidth = 1.25;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length - 1; i++) {
+        const xc = (points[i].x + points[i + 1].x) / 2;
+        const yc = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      }
+      ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+      ctx.stroke();
+    }
+
+    /* 4. AUDIO RECORDING */
     const micBtn = document.getElementById('mic-toggle-btn');
     const dot = document.getElementById('record-dot');
     const timerDisplay = document.getElementById('timer-display');
@@ -308,6 +409,13 @@
       if (!isRecording) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 1024;
+          const source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+
           mediaRecorder = new MediaRecorder(stream);
           recordedChunks = [];
           mediaRecorder.ondataavailable = e => e.data.size > 0 && recordedChunks.push(e.data);
@@ -315,13 +423,17 @@
             const blob = new Blob(recordedChunks, { type: 'audio/webm' });
             lastAudioUrl = URL.createObjectURL(blob);
             stream.getTracks().forEach(t => t.stop());
+            if (audioContext && audioContext.state !== 'closed') audioContext.close();
           };
+
           mediaRecorder.start();
           isRecording = true;
 
           micBtn.classList.add('scale-105');
           dot.classList.remove('opacity-0');
           
+          renderBendingLine();
+
           startTime = Date.now();
           timerDisplay.classList.remove('opacity-0');
           timerInterval = setInterval(() => {
@@ -335,6 +447,7 @@
       } else {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         clearInterval(timerInterval);
+        cancelAnimationFrame(animFrameId);
         isRecording = false;
 
         document.getElementById('record-controls').classList.add('hidden');
@@ -343,7 +456,7 @@
       }
     });
 
-    /* Grading */
+    /* 5. GRADING & CARDS FLOW */
     async function handleGrade(success) {
       const current = queue[currentIndex];
       const cardEl = document.getElementById('card');
@@ -385,7 +498,7 @@
       }
     });
 
-    /* Minimal Header Navigation */
+    /* 6. NAVIGATION */
     const tabPracticeBtn = document.getElementById('tab-practice-btn');
     const tabDictBtn = document.getElementById('tab-dictionary-btn');
     const viewPractice = document.getElementById('view-practice');
@@ -398,6 +511,7 @@
 
         tabPracticeBtn.className = "text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors";
         tabDictBtn.className = "text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors";
+        setTimeout(resizeCanvas, 50);
       } else {
         viewPractice.classList.add('hidden');
         viewDictionary.classList.remove('hidden');
@@ -412,7 +526,7 @@
     tabPracticeBtn.addEventListener('click', () => switchTab('practice'));
     tabDictBtn.addEventListener('click', () => switchTab('dictionary'));
 
-    /* ================= DICTIONARY & APPLE SWIPE ================= */
+    /* 7. DICTIONARY & CLEAN SWIPE-TO-DELETE */
     const dictList = document.getElementById('dict-list');
     let currentlySwipedRow = null;
 
@@ -435,12 +549,12 @@
         itemWrapper.className = "relative overflow-hidden rounded-2xl select-none";
         
         itemWrapper.innerHTML = `
-          <!-- Trash zone behind -->
+          <!-- Trash zone behind: neutral background, only the icon is red -->
           <div class="absolute inset-y-0 right-0 w-[64px] flex items-center justify-center text-red-500 active:opacity-70 transition-opacity" data-delete-id="${card.id}">
             <i data-lucide="trash-2" class="w-5 h-5 text-red-500 stroke-[1.75]"></i>
           </div>
 
-          <!-- Foreground Card -->
+          <!-- Pure white card on top -->
           <div class="swipe-content relative bg-white border border-neutral-200/80 rounded-2xl px-4 py-3.5 flex items-center justify-between z-10">
             <div class="flex-1 min-w-0 pr-3 pointer-events-none">
               <div class="flex items-center gap-2">
@@ -549,7 +663,7 @@
       }
     });
 
-    /* ================= iOS SPOTLIGHT SEARCH MECHANICS ================= */
+    /* 8. SPOTLIGHT SEARCH */
     const spotlightOverlay = document.getElementById('spotlight-overlay');
     const spotlightPanel = document.getElementById('spotlight-panel');
     const dictSearch = document.getElementById('dict-search');
@@ -585,7 +699,6 @@
       renderDictionary(e.target.value);
     });
 
-    // Detect Pull-Down gesture on dictionary to open Spotlight
     let pullStartY = 0;
     viewDictionary.addEventListener('touchstart', (e) => {
       if (viewDictionary.scrollTop <= 0) {
@@ -605,7 +718,7 @@
       }
     }, { passive: true });
 
-    /* ================= ADD EXPRESSION MODAL ================= */
+    /* 9. MODAL ADD */
     const modal = document.getElementById('add-modal');
     const inPhrase = document.getElementById('in-phrase');
     const inExample = document.getElementById('in-example');
@@ -640,12 +753,17 @@
       }
     });
 
-    /* Bootstrap */
+    /* 10. BOOTSTRAP & SERVICE WORKER */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDB();
       await seedInitial();
       await initQueue();
+      resizeCanvas();
       lucide.createIcons();
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
     });
   </script>
 </body>
