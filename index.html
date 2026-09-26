@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-[#FAFAFA]">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>Vocalize</title>
   
-  <!-- PWA & Apple Meta Tags -->
+  <!-- PWA & Apple Status Bar Sync -->
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
   <link rel="manifest" href="./manifest.json">
@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Vocalize">
   <meta name="theme-color" content="#FAFAFA">
+  <meta name="msapplication-navbutton-color" content="#FAFAFA">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -24,12 +25,17 @@
       color-scheme: light only;
     }
     
-    body {
+    html, body {
+      background-color: #FAFAFA !important;
+      color: #171717;
+      height: 100dvh;
+      min-height: -webkit-fill-available;
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
-      background-color: #FAFAFA;
-      color: #171717;
+    }
+
+    body {
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
     }
@@ -42,9 +48,18 @@
       transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
     }
 
-    input, textarea {
+    /* Модальні інпути */
+    #add-modal input, #add-modal textarea {
       background-color: #FFFFFF !important;
       color: #171717 !important;
+    }
+
+    /* Spotlight: єдиний суцільний колір без різниці відтінків */
+    #dict-search {
+      background-color: transparent !important;
+      color: #171717 !important;
+      border: none !important;
+      box-shadow: none !important;
     }
 
     .swipe-content {
@@ -56,7 +71,7 @@
     }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex flex-col justify-between">
+<body class="w-screen overflow-hidden flex flex-col justify-between">
 
   <!-- MINIMAL HEADER -->
   <header class="w-full px-6 pt-3 pb-3 flex justify-between items-center z-20">
@@ -107,31 +122,26 @@
       </div>
     </div>
 
-    <!-- Bottom Controls Area -->
+    <!-- Bottom Controls -->
     <div class="w-full flex flex-col items-center">
-      
-      <!-- 1. RECORDING MODE WITH BENDING VECTOR LINE -->
+      <!-- Recording Mode with Bending Vector Line -->
       <div id="record-controls" class="flex flex-col items-center w-full max-w-xs">
-        
-        <!-- Bending Line Indicator Canvas -->
         <div class="w-48 h-10 flex items-center justify-center mb-2 relative">
           <canvas id="voice-line-canvas" class="w-full h-full"></canvas>
           <div id="timer-display" class="absolute -top-3 text-[10px] font-mono text-neutral-400 opacity-0 transition-opacity">00:00</div>
         </div>
 
-        <!-- Solid Black Action Circle -->
         <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-neutral-950 flex items-center justify-center active:scale-90 transition-all shadow-md">
           <div id="record-dot" class="w-2.5 h-2.5 rounded-full bg-red-500 opacity-0 transition-opacity"></div>
         </button>
       </div>
 
-      <!-- 2. REVIEW & GRADING MODE -->
+      <!-- Review / Grading Mode -->
       <div id="grade-controls" class="hidden w-full max-w-xs flex items-center justify-between gap-4">
         <button id="btn-again" class="flex-1 py-3.5 text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-900 transition-colors">
           ← Hard
         </button>
 
-        <!-- Solid Black Play Circle -->
         <button id="btn-listen-self" title="Listen to yourself" class="w-12 h-12 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-all flex-shrink-0 shadow-sm">
           <i data-lucide="play" class="w-4 h-4 fill-white translate-x-0.5"></i>
         </button>
@@ -140,7 +150,6 @@
           Easy →
         </button>
       </div>
-
     </div>
 
   </main>
@@ -158,11 +167,12 @@
   <!-- ================= SPOTLIGHT SEARCH OVERLAY ================= -->
   <div id="spotlight-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-200">
     <div id="spotlight-panel" class="w-full max-w-md mx-auto px-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 -translate-y-full">
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-neutral-200/80 shadow-2xl p-2.5 flex items-center gap-3">
-        <i data-lucide="search" class="w-4 h-4 text-neutral-400 ml-2 stroke-[1.5]"></i>
+      <!-- Суцільна, однорідна за кольором панель -->
+      <div class="bg-white rounded-2xl border border-neutral-200/80 shadow-2xl p-2.5 flex items-center gap-3">
+        <i data-lucide="search" class="w-4 h-4 text-neutral-400 ml-2 stroke-[1.5] flex-shrink-0"></i>
         <input type="text" id="dict-search" placeholder="Search expressions..." autocomplete="off"
-               class="flex-1 bg-transparent text-sm text-neutral-950 placeholder-neutral-400 focus:outline-none">
-        <button id="close-spotlight-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-900 px-2 py-1">
+               class="flex-1 text-sm text-neutral-950 placeholder-neutral-400 focus:outline-none p-0 m-0">
+        <button id="close-spotlight-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-900 px-2 py-1 flex-shrink-0">
           Cancel
         </button>
       </div>
@@ -202,8 +212,8 @@
 
   <!-- ================= JS ENGINE ================= -->
   <script>
-    /* 1. DATABASE (LOCAL-FIRST) */
-    const DB_NAME = 'vocalize_clean_v5';
+    /* 1. DATABASE LAYER */
+    const DB_NAME = 'vocalize_clean_v6';
     let db;
 
     function openDB() {
@@ -335,7 +345,6 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Flat resting hairline
     function drawIdleLine() {
       const width = lineCanvas.width / (window.devicePixelRatio || 1);
       const height = lineCanvas.height / (window.devicePixelRatio || 1);
@@ -351,7 +360,6 @@
       ctx.stroke();
     }
 
-    // Dynamic bending line using Web Audio Time-Domain Data
     function renderBendingLine() {
       if (!isRecording) return;
       animFrameId = requestAnimationFrame(renderBendingLine);
@@ -373,7 +381,6 @@
 
       for (let i = 0; i < pointsCount; i++) {
         const val = (dataArray[i * step] - 128) / 128.0;
-        // Edge dampening window (Hanning curve so endpoints anchor to center)
         const envelope = Math.sin(Math.PI * (i / (pointsCount - 1)));
         const yOffset = val * (height * 0.42) * envelope;
         
@@ -383,7 +390,6 @@
         });
       }
 
-      // Render smooth vector curve
       ctx.beginPath();
       ctx.strokeStyle = '#171717';
       ctx.lineWidth = 1.25;
@@ -431,7 +437,6 @@
 
           micBtn.classList.add('scale-105');
           dot.classList.remove('opacity-0');
-          
           renderBendingLine();
 
           startTime = Date.now();
@@ -456,7 +461,7 @@
       }
     });
 
-    /* 5. GRADING & CARDS FLOW */
+    /* 5. GRADING */
     async function handleGrade(success) {
       const current = queue[currentIndex];
       const cardEl = document.getElementById('card');
@@ -549,12 +554,10 @@
         itemWrapper.className = "relative overflow-hidden rounded-2xl select-none";
         
         itemWrapper.innerHTML = `
-          <!-- Trash zone behind: neutral background, only the icon is red -->
           <div class="absolute inset-y-0 right-0 w-[64px] flex items-center justify-center text-red-500 active:opacity-70 transition-opacity" data-delete-id="${card.id}">
             <i data-lucide="trash-2" class="w-5 h-5 text-red-500 stroke-[1.75]"></i>
           </div>
 
-          <!-- Pure white card on top -->
           <div class="swipe-content relative bg-white border border-neutral-200/80 rounded-2xl px-4 py-3.5 flex items-center justify-between z-10">
             <div class="flex-1 min-w-0 pr-3 pointer-events-none">
               <div class="flex items-center gap-2">
@@ -663,7 +666,7 @@
       }
     });
 
-    /* 8. SPOTLIGHT SEARCH */
+    /* ================= 8. SPOTLIGHT SEARCH (WITH SWIPE UP TO CLOSE) ================= */
     const spotlightOverlay = document.getElementById('spotlight-overlay');
     const spotlightPanel = document.getElementById('spotlight-panel');
     const dictSearch = document.getElementById('dict-search');
@@ -699,6 +702,21 @@
       renderDictionary(e.target.value);
     });
 
+    // Свайп вгору для закриття Spotlight
+    let spotTouchStartY = 0;
+    spotlightOverlay.addEventListener('touchstart', (e) => {
+      spotTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    spotlightOverlay.addEventListener('touchmove', (e) => {
+      const diffY = e.touches[0].clientY - spotTouchStartY;
+      // Свайп вгору на 25px або більше закриває пошук
+      if (diffY < -25) {
+        closeSpotlight();
+      }
+    }, { passive: true });
+
+    // Свайп вниз у словнику для відкриття Spotlight
     let pullStartY = 0;
     viewDictionary.addEventListener('touchstart', (e) => {
       if (viewDictionary.scrollTop <= 0) {
@@ -711,7 +729,7 @@
     viewDictionary.addEventListener('touchmove', (e) => {
       if (pullStartY > 0 && viewDictionary.scrollTop <= 0) {
         const pullDistance = e.touches[0].clientY - pullStartY;
-        if (pullDistance > 60) {
+        if (pullDistance > 55) {
           pullStartY = 0;
           openSpotlight();
         }
@@ -753,7 +771,7 @@
       }
     });
 
-    /* 10. BOOTSTRAP & SERVICE WORKER */
+    /* 10. BOOTSTRAP */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDB();
       await seedInitial();
