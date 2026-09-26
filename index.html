@@ -37,14 +37,13 @@
       overflow: hidden;
       background-color: var(--bg-white);
       color: var(--text-black);
-      /* Нативний системний шрифт: 0ms завантаження, максимальна чистота */
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
       overscroll-behavior: none;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      /* Плавний перехід кольору фону та тексту між чорним і білим */
+      transition: background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    /* БЕЗШОВНИЙ ГОРИЗОНТАЛЬНИЙ КАНВАС З ДВОХ СТОРІНОК */
     #viewport {
       width: 100%;
       height: 100%;
@@ -58,7 +57,7 @@
       height: 100%;
       transform: translateX(0%);
       will-change: transform;
-      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1); /* Нативна крива ковзання iOS */
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     #track.show-archive {
@@ -71,6 +70,7 @@
       position: relative;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
+      transition: background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     /* ГОЛОВНИЙ ЕКРАН */
@@ -93,26 +93,47 @@
       justify-content: center;
       gap: 4.8rem;
       width: 100%;
-      transition: opacity 0.22s ease, transform 0.15s ease-out;
+      /* Плавне розчинення при зміні слів */
+      transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    /* ПЛАВНЕ ЗАКРЕСЛЕННЯ СЛОВА */
     .word-item {
       font-size: 2.9rem;
       font-weight: 300;
       letter-spacing: -0.035em;
       cursor: pointer;
       line-height: 1;
-      transition: opacity 0.15s ease, transform 0.1s ease;
+      position: relative;
+      display: inline-block;
+      transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    .words-container.pulse-finish {
-      transform: scale(0.96);
+    /* Анімована лінія викреслювання */
+    .word-item::after {
+      content: '';
+      position: absolute;
+      left: -3%;
+      top: 50%;
+      width: 106%;
+      height: 2px;
+      background-color: currentColor;
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
     }
 
     .word-item.struck {
-      text-decoration: line-through;
-      text-decoration-thickness: 2px;
-      opacity: 0.55;
+      opacity: 0.38;
+    }
+
+    .word-item.struck::after {
+      transform: scaleX(1);
+    }
+
+    .words-container.pulse-finish {
+      transform: scale(0.97);
     }
 
     /* ПОЛЕ ВВОДУ СЛОВА */
@@ -155,29 +176,21 @@
       opacity: var(--dim-opacity);
     }
 
-    /* СЛОВНИК (NOTION-STYLE) */
+    /* СЛОВНИК (БЕЗ ЗАГОЛОВКА, ЧИСТИЙ NOTION) */
     #archive-page {
       background-color: var(--bg-white);
       color: var(--text-black);
-      padding: calc(3.5rem + env(safe-area-inset-top)) 2.2rem env(safe-area-inset-bottom) 2.2rem;
+      padding: calc(3rem + env(safe-area-inset-top)) 2.2rem env(safe-area-inset-bottom) 2.2rem;
       overflow-y: auto;
       user-select: text;
       -webkit-user-select: text;
-    }
-
-    .archive-header {
-      font-size: 0.8rem;
-      font-weight: 400;
-      color: var(--notion-subtle);
-      margin-bottom: 2.5rem;
-      letter-spacing: -0.01em;
     }
 
     .archive-list {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1.6rem;
     }
 
     .archive-item {
@@ -228,7 +241,7 @@
 
 <div id="viewport">
   <div id="track">
-    <!-- СТОРІНКА 1: ГОЛОВНИЙ ЕКРАН / ЗАПИС / РЕВ'Ю -->
+    <!-- СТОРІНКА 1: ГОЛОВНА -->
     <section id="main-page" class="page">
       <div class="words-container" id="words-container"></div>
       
@@ -237,9 +250,8 @@
       </div>
     </section>
 
-    <!-- СТОРІНКА 2: БЕЗШОВНИЙ СЛОВНИК + АРХІВ -->
+    <!-- СТОРІНКА 2: СЛОВНИК (БЕЗ ЗАГОЛОВКА) -->
     <section id="archive-page" class="page">
-      <div class="archive-header">словник + архів записів</div>
       <div class="archive-list" id="archive-list"></div>
     </section>
   </div>
@@ -285,33 +297,60 @@ async function seedInitialWords() {
 
 function getAllWords() {
   return new Promise((resolve) => {
+    if (!db) return resolve([]);
     const tx = db.transaction('words', 'readonly');
     const req = tx.objectStore('words').getAll();
     req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
   });
 }
 
 function saveWord(word) {
   return new Promise((resolve) => {
+    if (!db) return resolve();
     const tx = db.transaction('words', 'readwrite');
     tx.objectStore('words').put(word);
     tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
   });
 }
 
-function saveRecording(rec) {
-  return new Promise((resolve) => {
-    const tx = db.transaction('recordings', 'readwrite');
-    tx.objectStore('recordings').put(rec);
-    tx.oncomplete = () => resolve();
+// Безпечне збереження аудіо (сумісне з iOS Safari)
+async function saveRecordingSafe(rec) {
+  return new Promise(async (resolve) => {
+    if (!db) return resolve();
+    try {
+      let audioBuffer = null;
+      if (rec.blob && rec.blob.arrayBuffer) {
+        try {
+          audioBuffer = await rec.blob.arrayBuffer();
+        } catch (e) {}
+      }
+
+      const tx = db.transaction('recordings', 'readwrite');
+      tx.objectStore('recordings').put({
+        id: rec.id,
+        date: rec.date,
+        words: rec.words,
+        audioBuffer: audioBuffer,
+        mimeType: rec.blob ? rec.blob.type : 'audio/webm'
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch (err) {
+      console.warn('saveRecording failed:', err);
+      resolve();
+    }
   });
 }
 
 function getAllRecordings() {
   return new Promise((resolve) => {
+    if (!db) return resolve([]);
     const tx = db.transaction('recordings', 'readonly');
     const req = tx.objectStore('recordings').getAll();
     req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
   });
 }
 
@@ -321,7 +360,7 @@ const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
 
 function setSystemBarsTheme(isDark) {
   const color = isDark ? '#000000' : '#ffffff';
-  themeColorMeta.setAttribute('content', color);
+  if (themeColorMeta) themeColorMeta.setAttribute('content', color);
   if (isDark) {
     document.body.classList.add('dark-mode');
     if (statusBarStyleMeta) statusBarStyleMeta.setAttribute('content', 'black-translucent');
@@ -329,8 +368,6 @@ function setSystemBarsTheme(isDark) {
     document.body.classList.remove('dark-mode');
     if (statusBarStyleMeta) statusBarStyleMeta.setAttribute('content', 'default');
   }
-  document.documentElement.style.backgroundColor = color;
-  document.body.style.backgroundColor = color;
 }
 
 /* ================= 3. АЛГОРИТМ SRS ================= */
@@ -351,7 +388,6 @@ async function pickThreeWords() {
   let pool = all.filter(w => (w.nextReview || 0) <= now);
   if (pool.length < 3) pool = [...all];
 
-  // Сортуємо: рівень 0 (невикористані/нові) мають абсолютний пріоритет
   pool.sort((a, b) => (a.level - b.level) + (Math.random() - 0.5));
   return pool.slice(0, 3);
 }
@@ -389,12 +425,12 @@ async function startAudioRecording() {
     };
     mediaRecorder.start();
 
-    beepTimeout = setTimeout(() => playBeep(), 105 * 1000); // 1:45
+    beepTimeout = setTimeout(() => playBeep(), 105 * 1000);
     maxLimitTimeout = setTimeout(() => {
       if (appState === 'recording') stopSession();
-    }, 120 * 1000); // 2:00
+    }, 120 * 1000);
   } catch (err) {
-    console.warn('Мікрофон недоступний', err);
+    console.warn('Мікрофон недоступний:', err);
   }
 }
 
@@ -423,7 +459,6 @@ let struckWordIds = new Set();
 let lastRecordedBlob = null;
 
 const track = document.getElementById('track');
-const mainPage = document.getElementById('main-page');
 const wordsContainer = document.getElementById('words-container');
 const addWordOverlay = document.getElementById('add-word-overlay');
 const newWordInput = document.getElementById('new-word-input');
@@ -458,30 +493,43 @@ async function stopSession() {
   setTimeout(() => wordsContainer.classList.remove('pulse-finish'), 150);
 }
 
+// Завершення сесії: плавний перехід і гарантований тап
 async function completeReviewAndRefresh() {
-  for (const w of currentWords) {
-    if (struckWordIds.has(w.id)) {
-      w.level = Math.min((w.level || 0) + 1, 5);
-      w.nextReview = Date.now() + INTERVALS[w.level];
-    } else {
-      w.level = 0;
-      w.nextReview = Date.now();
+  // Плавне розчинення старих слів
+  wordsContainer.style.opacity = '0';
+
+  try {
+    for (const w of currentWords) {
+      if (struckWordIds.has(w.id)) {
+        w.level = Math.min((w.level || 0) + 1, 5);
+        w.nextReview = Date.now() + INTERVALS[w.level];
+      } else {
+        w.level = 0;
+        w.nextReview = Date.now();
+      }
+      await saveWord(w);
     }
-    await saveWord(w);
+
+    if (lastRecordedBlob) {
+      await saveRecordingSafe({
+        id: 'rec_' + Date.now(),
+        date: new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }),
+        blob: lastRecordedBlob,
+        words: currentWords.map(w => w.text)
+      });
+    }
+  } catch (err) {
+    console.warn('Review save error:', err);
   }
 
-  if (lastRecordedBlob) {
-    await saveRecording({
-      id: 'rec_' + Date.now(),
-      date: new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }),
-      blob: lastRecordedBlob,
-      words: currentWords.map(w => w.text)
-    });
-  }
-
+  // Плавна зміна теми на білу
   setSystemBarsTheme(false);
   appState = 'idle';
-  await renderMainWords();
+
+  setTimeout(async () => {
+    await renderMainWords();
+    wordsContainer.style.opacity = '1';
+  }, 180);
 }
 
 /* ================= 6. ДОДАВАННЯ СЛІВ ================= */
@@ -515,7 +563,7 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-/* ================= 7. БЕЗШОВНИЙ СЛОВНИК ================= */
+/* ================= 7. СЛОВНИК ================= */
 async function renderArchiveList() {
   const words = await getAllWords();
   const recordings = await getAllRecordings();
@@ -545,12 +593,19 @@ async function renderArchiveList() {
   });
 
   archiveList.querySelectorAll('.audio-row').forEach(row => {
-    row.onclick = () => {
+    row.onclick = (e) => {
+      e.stopPropagation();
       const rec = recordings.find(r => r.id === row.dataset.id);
-      if (!rec || !rec.blob) return;
+      if (!rec) return;
+
+      let audioBlob = rec.blob;
+      if (!audioBlob && rec.audioBuffer) {
+        audioBlob = new Blob([rec.audioBuffer], { type: rec.mimeType || 'audio/webm' });
+      }
+      if (!audioBlob) return;
 
       const icon = row.querySelector('.play-icon');
-      const audioUrl = URL.createObjectURL(rec.blob);
+      const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       icon.textContent = '❚❚';
       audio.play();
@@ -570,47 +625,55 @@ function closeArchive() {
   appState = 'idle';
 }
 
-/* ================= 8. ТАПИ ТА СВАЙПИ ================= */
-let touchStartX = 0;
-let touchStartY = 0;
+/* ================= 8. ЖЕСТИ ТА ТАПИ ================= */
+let startX = 0;
+let startY = 0;
+let isDragging = false;
+let didSwipe = false;
 
-window.addEventListener('touchstart', (e) => {
-  touchStartX = e.changedTouches[0].screenX;
-  touchStartY = e.changedTouches[0].screenY;
-}, { passive: true });
+window.addEventListener('pointerdown', (e) => {
+  startX = e.clientX;
+  startY = e.clientY;
+  isDragging = true;
+  didSwipe = false;
+});
 
-window.addEventListener('touchend', async (e) => {
-  const diffX = e.changedTouches[0].screenX - touchStartX;
-  const diffY = e.changedTouches[0].screenY - touchStartY;
+window.addEventListener('pointerup', async (e) => {
+  if (!isDragging) return;
+  isDragging = false;
+
+  const diffX = e.clientX - startX;
+  const diffY = e.clientY - startY;
   const absX = Math.abs(diffX);
   const absY = Math.abs(diffY);
 
-  // Свайп вниз на головному -> додати слово
-  if (diffY > 45 && absY > absX && appState === 'idle') {
-    openAddWord();
-    return;
-  }
+  // Поріг 45px для свайпу
+  if (absX > 45 || absY > 45) {
+    didSwipe = true;
 
-  // Свайп вгору під час вводу -> зберегти
-  if (diffY < -45 && absY > absX && appState === 'adding') {
-    await closeAndSaveNewWord();
-    return;
-  }
-
-  // Свайп вліво на головному -> плавний перехід у словник
-  if (diffX < -50 && absX > absY && appState === 'idle') {
-    openArchive();
-    return;
-  }
-
-  // Свайп вправо у словнику -> плавне повернення
-  if (diffX > 50 && absX > absY && appState === 'archive') {
-    closeArchive();
-    return;
+    if (diffY > 45 && absY > absX && appState === 'idle') {
+      openAddWord();
+      return;
+    }
+    if (diffY < -45 && absY > absX && appState === 'adding') {
+      await closeAndSaveNewWord();
+      return;
+    }
+    if (diffX < -45 && absX > absY && appState === 'idle') {
+      openArchive();
+      return;
+    }
+    if (diffX > 45 && absX > absY && appState === 'archive') {
+      closeArchive();
+      return;
+    }
   }
 });
 
-mainPage.addEventListener('click', async (e) => {
+// Клік / Тап
+document.getElementById('main-page').addEventListener('click', async (e) => {
+  if (didSwipe) return;
+
   if (appState === 'idle') {
     await startSession();
     return;
@@ -633,6 +696,7 @@ mainPage.addEventListener('click', async (e) => {
         wordEl.classList.add('struck');
       }
     } else {
+      // ТАП ПО ПОРОЖНЬОМУ ФОНУ -> ПЕРЕХІД
       await completeReviewAndRefresh();
     }
   }
@@ -644,12 +708,9 @@ newWordInput.addEventListener('keydown', async (e) => {
   }
 });
 
-/* ================= 9. РЕЄСТРАЦІЯ SERVICE WORKER ================= */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => {
-      console.warn('SW failed:', err);
-    });
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 
