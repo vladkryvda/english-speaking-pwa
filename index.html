@@ -17,7 +17,6 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
     
-    /* БЛОКУВАННЯ СКРОЛУ, ЗУМУ ТА ПРИХОВУВАННЯ СКРОЛБАРІВ */
     * {
       -webkit-tap-highlight-color: transparent;
       user-select: none;
@@ -47,13 +46,6 @@
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
       transition: background-color 0.25s ease, color 0.25s ease;
-    }
-
-    /* ФІКСАЦІЯ ПОРТРЕТНОЇ ОРІЄНТАЦІЇ */
-    @media screen and (orientation: landscape) {
-      body {
-        transform: rotate(0deg);
-      }
     }
 
     /* РЕЖИМ ЗАПИСУ: ЧИСТА OLED ТЕМРЯВА */
@@ -88,7 +80,6 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Плавне розкриття прикладу */
     .word-hint {
       max-height: 0;
       opacity: 0;
@@ -101,20 +92,17 @@
       margin-top: 0.35rem;
     }
 
-    /* Стан рефлексії на словах */
     .word-row.is-reflection.is-selected .word-text {
       text-decoration: line-through;
       color: #A3A3A3 !important;
     }
 
-    /* АПАРАТНЕ 3D ПРИСКОРЕННЯ СВАЙПУ (120 FPS НА IPHONE) */
     .view-slider {
       will-change: transform;
       transform: translate3d(0, 0, 0);
       transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Bottom Sheet додавання */
     #add-sheet {
       will-change: transform;
       transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
@@ -126,10 +114,10 @@
   <!-- ================= СЛАЙДЕР ЕКРАНІВ ================= -->
   <div id="view-slider" class="view-slider flex w-[200vw] h-full">
 
-    <!-- ================= 1. ЕКРАН ПРАКТИКИ (АБСОЛЮТНИЙ МІНІМАЛІЗМ) ================= -->
+    <!-- ================= 1. ЕКРАН ПРАКТИКИ ================= -->
     <section id="view-practice" class="w-screen h-full flex flex-col justify-between px-7 pb-8 pt-4 relative flex-shrink-0">
       
-      <!-- ТЕМА СЦЕНАРІЮ (ТАП ПО НІЙ ЗМІНЮЄ ТЕМУ) -->
+      <!-- ТЕМА СЦЕНАРІЮ -->
       <div id="scenario-container" class="w-full flex flex-col items-center text-center pt-2">
         <p id="prompt-question" title="Tap to change topic" class="text-xs sm:text-sm font-light text-neutral-400 leading-relaxed max-w-xs transition-opacity cursor-pointer active:opacity-40">
           Loading scenario...
@@ -137,9 +125,7 @@
       </div>
 
       <!-- 3 ВЕЛИКІ СЛОВА В СТОВПЧИК -->
-      <div id="words-container" class="flex-1 flex flex-col justify-center items-center space-y-8 sm:space-y-10 my-auto w-full">
-        <!-- Генерується через JS -->
-      </div>
+      <div id="words-container" class="flex-1 flex flex-col justify-center items-center space-y-8 sm:space-y-10 my-auto w-full"></div>
 
       <!-- ПІДКАЗКА РЕФЛЕКСІЇ -->
       <div id="reflection-hint" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">
@@ -148,20 +134,15 @@
 
       <!-- НИЖНЯ ЗОНА ДІЇ -->
       <div id="action-zone" class="w-full flex flex-col items-center">
-        
-        <!-- Кнопка запису -->
         <button id="mic-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-transform shadow-md flex items-center justify-center">
           <div id="stop-square" class="w-4 h-4 rounded-sm bg-white hidden"></div>
         </button>
 
-        <!-- Елементи рефлексії на місці (Слухати + Пауза + Завершити) -->
         <div id="reflection-controls" class="hidden flex items-center gap-4">
           <button id="btn-play-self" title="Listen" class="w-12 h-12 rounded-full border border-neutral-200 bg-white flex items-center justify-center active:scale-90 transition-transform text-neutral-950">
-            <!-- Іконка Play за замовчуванням -->
             <svg id="play-icon-svg" class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            <!-- Іконка Pause (прихована) -->
             <svg id="pause-icon-svg" class="w-4 h-4 fill-current hidden" viewBox="0 0 24 24">
               <rect x="6" y="4" width="4" height="16" rx="1"></rect>
               <rect x="14" y="4" width="4" height="16" rx="1"></rect>
@@ -172,15 +153,13 @@
             Done →
           </button>
         </div>
-
       </div>
 
     </section>
 
-    <!-- ================= 2. БІБЛІОТЕКА (ВХІД ТІЛЬКИ ЧЕРЕЗ СВАЙП ВЛІВО) ================= -->
+    <!-- ================= 2. БІБЛІОТЕКА ================= -->
     <section id="view-library" class="w-screen h-full flex flex-col px-7 pb-8 pt-4 relative flex-shrink-0 bg-[#FAFAFA]">
       
-      <!-- Верхній рядок Бібліотеки: Стрік зліва, Додати (+) справа -->
       <div class="w-full flex justify-between items-center mb-4 pt-1">
         <div class="flex items-center gap-1.5 text-[11px] font-mono text-neutral-500">
           <span>●</span>
@@ -188,7 +167,6 @@
           <span class="text-[9px] text-neutral-400 uppercase tracking-wider">days streak</span>
         </div>
 
-        <!-- Кнопка додавання слова (+) перенесена сюди -->
         <button id="open-add-btn" title="Add expression" class="p-1.5 text-neutral-400 hover:text-neutral-950 active:scale-90 transition-transform">
           <svg class="w-4 h-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
             <line x1="7" y1="2" x2="7" y2="12"></line>
@@ -197,7 +175,6 @@
         </button>
       </div>
 
-      <!-- Вкладки: Слова / Аудіо -->
       <div class="flex items-center gap-4 border-b border-neutral-200/80 pb-2 mb-3">
         <button id="subtab-words" class="text-xs font-mono uppercase tracking-wider font-medium text-neutral-950 transition-colors">
           Words (<span id="words-count">0</span>)
@@ -207,7 +184,6 @@
         </button>
       </div>
 
-      <!-- Контент Бібліотеки -->
       <div id="library-content" class="flex-1 overflow-y-auto overscroll-y-contain space-y-2 pb-12"></div>
 
     </section>
@@ -217,7 +193,6 @@
   <!-- ================= BOTTOM SHEET ДОДАВАННЯ СЛОВА ================= -->
   <div id="add-sheet-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-200 flex flex-col justify-end">
     <div id="add-sheet" class="w-full max-w-md mx-auto bg-white rounded-t-[32px] p-6 pt-3 shadow-2xl border-t border-neutral-100 translate-y-full">
-      
       <div class="w-9 h-1 rounded-full bg-neutral-200 mx-auto mb-4 cursor-grab"></div>
       
       <div class="flex items-center justify-between mb-4">
@@ -243,14 +218,13 @@
           </button>
         </div>
       </form>
-
     </div>
   </div>
 
   <!-- ================= JS ENGINE ================= -->
   <script>
-    /* 1. БАЗА ДАНИХ */
-    const DB_NAME = 'vocalize_zen_v13';
+    /* 1. БАЗА ДАНИХ (ІЗОЛЬОВАНА ОФЛАЙН) */
+    const DB_NAME = 'vocalize_zen_v14';
     let db;
 
     function openDB() {
@@ -401,7 +375,6 @@
     let activePlayerAudio = null;
     let recordMimeType = '';
 
-    // Визначення нативного формату аудіо для iOS Safari
     function detectMimeType() {
       if (typeof MediaRecorder === 'undefined') return '';
       const candidates = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm'];
@@ -458,7 +431,6 @@
       exitReflectionMode();
     }
 
-    // Тап по тексту теми змінює сценарій
     document.getElementById('prompt-question').addEventListener('click', () => {
       if (isRecording || isReflectionMode) return;
       haptic(10);
@@ -496,7 +468,7 @@
       } catch (e) {}
     }
 
-    /* 8. ЗАПИС АУДІО (БЕЗЗБІЙНИЙ IOS MP4 ЗАПИС) */
+    /* 8. ЗАПИС АУДІО */
     const micBtn = document.getElementById('mic-btn');
     const metaThemeColor = document.getElementById('meta-theme-color');
 
@@ -557,7 +529,7 @@
       metaThemeColor.setAttribute('content', '#FAFAFA');
     }
 
-    /* 9. РЕФЛЕКСІЯ ТА СТАБІЛЬНИЙ ПЛЕЄР З ПАУЗОЮ */
+    /* 9. РЕФЛЕКСІЯ ТА ПЛЕЄР З ПАУЗОЮ */
     const playSvg = document.getElementById('play-icon-svg');
     const pauseSvg = document.getElementById('pause-icon-svg');
 
@@ -583,7 +555,6 @@
         row.classList.add('is-reflection');
       });
 
-      // Ініціалізація аудіо для iOS
       if (activePlayerAudio) {
         activePlayerAudio.pause();
         activePlayerAudio.src = '';
@@ -605,9 +576,7 @@
         if (activePlayerAudio.paused) {
           activePlayerAudio.play().then(() => {
             setPlayerVisualState(true);
-          }).catch(err => {
-            console.error("Playback error:", err);
-          });
+          }).catch(err => console.error("Playback error:", err));
         } else {
           activePlayerAudio.pause();
           setPlayerVisualState(false);
@@ -663,7 +632,7 @@
       await initPracticeSession();
     });
 
-    /* 10. ШВИДКИЙ СВАЙП З АПАРАТНИМ ПРИСКОРЕННЯМ */
+    /* 10. ЖЕСТОВИЙ СВАЙП ДЛЯ НАВІГАЦІЇ */
     const viewSlider = document.getElementById('view-slider');
     let currentTab = 'practice';
 
@@ -798,7 +767,7 @@
       }
     }
 
-    /* 12. ШВИДКА ШТОРКА ДОДАВАННЯ СЛІВ */
+    /* 12. ШВИДКИЙ BOTTOM SHEET ДЛЯ ДОДАВАННЯ СЛОВА */
     const addOverlay = document.getElementById('add-sheet-overlay');
     const addSheet = document.getElementById('add-sheet');
     const sheetPhrase = document.getElementById('sheet-phrase');
@@ -846,7 +815,7 @@
       if (currentTab === 'library') renderLibrary();
     });
 
-    /* 13. БЛОКУВАННЯ ЖЕСТІВ ЗУМУ ТА ПОВОРОТУ */
+    /* 13. БЛОКУВАННЯ ЗУМУ ТА ПОВОРОТУ */
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('touchmove', (e) => {
       if (e.scale !== undefined && e.scale !== 1) e.preventDefault();
@@ -856,15 +825,24 @@
       screen.orientation.lock('portrait').catch(() => {});
     }
 
-    /* 14. СТАРТ */
+    /* 14. СТАРТ ТА РЕЄСТРАЦІЯ ОФЛАЙН КЕШУ */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDB();
       await seedInitial();
       updateStreakDisplay();
       await initPracticeSession();
 
+      // Надійна реєстрація Service Worker для повної офлайн-роботи
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => {
+              console.log('Offline SW registered successfully:', reg.scope);
+            })
+            .catch((err) => {
+              console.error('SW registration failed:', err);
+            });
+        });
       }
     });
   </script>
