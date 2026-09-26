@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -40,28 +40,33 @@
     .swipe-content {
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
+    /* iOS Spotlight Reveal */
+    #spotlight-panel {
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
   </style>
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col justify-between">
 
-  <!-- TOP BAR (з відступом для Dynamic Island / чубчика) -->
-  <header class="w-full px-6 pt-3 pb-3 flex justify-between items-center z-10 border-b border-neutral-200/60 bg-white/80 backdrop-blur-md">
-    <div class="flex items-center gap-1 bg-neutral-100 p-1 rounded-full border border-neutral-200/50">
-      <button id="tab-practice-btn" class="px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all bg-white text-neutral-950 shadow-sm">
-        Практика <span id="queue-badge" class="ml-1 text-[10px] font-mono text-neutral-400">0</span>
+  <!-- MINIMAL HEADER: Clean typographic bar -->
+  <header class="w-full px-6 pt-3 pb-3 flex justify-between items-center z-20">
+    <nav class="flex items-center gap-5">
+      <button id="tab-practice-btn" class="text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors">
+        Practice <span id="queue-badge" class="text-[10px] text-neutral-400 font-normal ml-0.5">0</span>
       </button>
-      <button id="tab-dictionary-btn" class="px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all text-neutral-500 hover:text-neutral-900">
-        Словник <span id="dict-badge" class="ml-1 text-[10px] font-mono text-neutral-400">0</span>
+      <button id="tab-dictionary-btn" class="text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors">
+        Dictionary <span id="dict-badge" class="text-[10px] text-neutral-400 font-normal ml-0.5">0</span>
       </button>
-    </div>
+    </nav>
 
-    <button id="open-add-btn" class="w-9 h-9 flex items-center justify-center rounded-full border border-neutral-200 bg-white active:scale-90 transition-all text-neutral-800 hover:border-neutral-900">
-      <i data-lucide="plus" class="w-4 h-4 stroke-[1.5]"></i>
+    <button id="open-add-btn" class="text-neutral-400 hover:text-neutral-950 p-1 active:scale-90 transition-transform">
+      <i data-lucide="plus" class="w-5 h-5 stroke-[1.5]"></i>
     </button>
   </header>
 
-  <!-- ================= VIEW 1: ПРАКТИКА ================= -->
-  <main id="view-practice" class="flex-1 flex flex-col justify-between px-6 pb-12 pt-6 relative">
+  <!-- ================= VIEW 1: PRACTICE ================= -->
+  <main id="view-practice" class="flex-1 flex flex-col justify-between px-6 pb-12 pt-4 relative">
     
     <div class="flex-1 flex items-center justify-center">
       <!-- Empty State -->
@@ -69,16 +74,16 @@
         <div class="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center mx-auto mb-3 text-neutral-400">
           <i data-lucide="check" class="w-4 h-4 stroke-[1.5]"></i>
         </div>
-        <p class="text-sm font-normal text-neutral-900 mb-1">Все на сьогодні</p>
-        <p class="text-xs text-neutral-400 mb-5">Черга порожня. Додай нові вирази або повтори через словник.</p>
+        <p class="text-sm font-normal text-neutral-900 mb-1">All caught up</p>
+        <p class="text-xs text-neutral-400 mb-5">No cards due for review right now.</p>
         <button onclick="openModal()" class="px-5 py-2 rounded-full border border-neutral-900 text-neutral-900 text-xs font-medium active:scale-95 transition-all">
-          + Додати слово
+          + Add Expression
         </button>
       </div>
 
-      <!-- Active Card -->
+      <!-- Active Practice Card -->
       <div id="card" class="card-transition w-full max-w-sm flex flex-col items-center text-center">
-        <button id="tts-btn" title="Прослухати" class="text-neutral-400 hover:text-neutral-950 p-2 mb-3 active:scale-90 transition-all">
+        <button id="tts-btn" title="Pronounce" class="text-neutral-400 hover:text-neutral-950 p-2 mb-3 active:scale-90 transition-all">
           <i data-lucide="volume-2" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
 
@@ -94,7 +99,7 @@
 
     <!-- Controls -->
     <div class="w-full flex flex-col items-center">
-      <!-- Режим запису: чорний круг -->
+      <!-- Recording Mode: Solid Black Circle -->
       <div id="record-controls" class="flex flex-col items-center">
         <div id="timer-display" class="text-[11px] font-mono text-neutral-400 mb-3 opacity-0 transition-opacity">00:00</div>
         <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-neutral-950 flex items-center justify-center active:scale-90 transition-all shadow-md">
@@ -102,44 +107,57 @@
         </button>
       </div>
 
-      <!-- Режим оцінки -->
+      <!-- Grading Mode -->
       <div id="grade-controls" class="hidden w-full max-w-xs flex items-center justify-between gap-4">
         <button id="btn-again" class="flex-1 py-3.5 text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-900 transition-colors">
-          ← Важко
+          ← Hard
         </button>
 
-        <button id="btn-listen-self" title="Послухати свій запис" class="w-12 h-12 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-all flex-shrink-0 shadow-sm">
+        <button id="btn-listen-self" title="Listen to yourself" class="w-12 h-12 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-all flex-shrink-0 shadow-sm">
           <i data-lucide="play" class="w-4 h-4 fill-white translate-x-0.5"></i>
         </button>
 
         <button id="btn-good" class="flex-1 py-3.5 text-xs font-mono uppercase tracking-wider text-neutral-900 font-medium transition-colors">
-          Легко →
+          Easy →
         </button>
       </div>
     </div>
 
   </main>
 
-  <!-- ================= VIEW 2: СЛОВНИК ================= -->
-  <section id="view-dictionary" class="hidden flex-1 overflow-y-auto px-6 py-4 max-w-md w-full mx-auto">
-    <!-- Search Bar -->
-    <div class="relative mb-4">
-      <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 stroke-[1.5]"></i>
-      <input type="text" id="dict-search" placeholder="Пошук виразів..." 
-             class="w-full bg-white border border-neutral-200/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 transition-all">
+  <!-- ================= VIEW 2: DICTIONARY ================= -->
+  <section id="view-dictionary" class="hidden flex-1 overflow-y-auto px-6 py-2 max-w-md w-full mx-auto relative overscroll-y-contain">
+    
+    <!-- Pull-down hint -->
+    <div id="pull-hint" class="text-center py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition-opacity">
+      ↓ Pull down to search
     </div>
 
-    <!-- Список карток без червоних рамок -->
-    <div id="dict-list" class="space-y-2.5 pb-8">
-      <!-- Наповнюється динамічно -->
+    <!-- Cards List with Apple Swipe-to-Delete -->
+    <div id="dict-list" class="space-y-2.5 pb-12 pt-1">
+      <!-- Injected via JS -->
     </div>
   </section>
 
-  <!-- ================= МОДАЛ ДОДАВАННЯ ================= -->
+  <!-- ================= SPOTLIGHT SEARCH OVERLAY ================= -->
+  <div id="spotlight-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-200">
+    <div id="spotlight-panel" class="w-full max-w-md mx-auto px-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 -translate-y-full">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-neutral-200/80 shadow-2xl p-2.5 flex items-center gap-3">
+        <i data-lucide="search" class="w-4 h-4 text-neutral-400 ml-2 stroke-[1.5]"></i>
+        <input type="text" id="dict-search" placeholder="Search expressions..." autocomplete="off"
+               class="flex-1 bg-transparent text-sm text-neutral-950 placeholder-neutral-400 focus:outline-none">
+        <button id="close-spotlight-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-900 px-2 py-1">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADD EXPRESSION MODAL ================= -->
   <div id="add-modal" class="fixed inset-0 bg-neutral-900/10 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-2xl relative">
       <div class="flex justify-between items-center mb-6">
-        <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Новий вираз</span>
+        <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">New Expression</span>
         <button onclick="closeModal()" class="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-900 transition-colors">
           <i data-lucide="x" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
@@ -147,28 +165,28 @@
 
       <form id="add-form" class="space-y-4">
         <div>
-          <input type="text" id="in-phrase" required placeholder="Слово або фраза" autocomplete="off"
+          <input type="text" id="in-phrase" required placeholder="Word or phrase" autocomplete="off"
                  class="w-full bg-white px-3.5 py-3 rounded-xl border border-neutral-200 text-sm font-normal text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors">
         </div>
 
         <div>
-          <textarea id="in-example" rows="2" placeholder="Приклад або контекст (опціонально)" autocomplete="off"
+          <textarea id="in-example" rows="2" placeholder="Example sentence or context (optional)" autocomplete="off"
                     class="w-full bg-white px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-light text-neutral-700 placeholder-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors resize-none"></textarea>
         </div>
 
         <div class="pt-2 flex items-center justify-between">
           <span class="text-[10px] font-mono text-neutral-400">↵ Enter</span>
           <button type="submit" class="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-medium tracking-wide active:scale-95 transition-all">
-            Зберегти
+            Save
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ================= JS ================= -->
+  <!-- ================= JAVASCRIPT ================= -->
   <script>
-    const DB_NAME = 'vocalize_db_v4';
+    const DB_NAME = 'vocalize_db_en';
     let db;
 
     function openDB() {
@@ -312,7 +330,7 @@
           }, 500);
 
         } catch (e) {
-          alert('Дозвольте мікрофон у браузері');
+          alert('Microphone access is required.');
         }
       } else {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
@@ -367,7 +385,7 @@
       }
     });
 
-    /* Navigation */
+    /* Minimal Header Navigation */
     const tabPracticeBtn = document.getElementById('tab-practice-btn');
     const tabDictBtn = document.getElementById('tab-dictionary-btn');
     const viewPractice = document.getElementById('view-practice');
@@ -378,14 +396,14 @@
         viewPractice.classList.remove('hidden');
         viewDictionary.classList.add('hidden');
 
-        tabPracticeBtn.className = "px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all bg-white text-neutral-950 shadow-sm";
-        tabDictBtn.className = "px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all text-neutral-500 hover:text-neutral-900";
+        tabPracticeBtn.className = "text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors";
+        tabDictBtn.className = "text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors";
       } else {
         viewPractice.classList.add('hidden');
         viewDictionary.classList.remove('hidden');
 
-        tabDictBtn.className = "px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all bg-white text-neutral-950 shadow-sm";
-        tabPracticeBtn.className = "px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all text-neutral-500 hover:text-neutral-900";
+        tabDictBtn.className = "text-xs font-mono tracking-wider uppercase font-medium text-neutral-950 transition-colors";
+        tabPracticeBtn.className = "text-xs font-mono tracking-wider uppercase font-normal text-neutral-400 hover:text-neutral-950 transition-colors";
 
         renderDictionary();
       }
@@ -394,9 +412,8 @@
     tabPracticeBtn.addEventListener('click', () => switchTab('practice'));
     tabDictBtn.addEventListener('click', () => switchTab('dictionary'));
 
-    /* ================= APPLE-STYLE SWIPE: БЕЗ ЧЕРВОНОГО ВИПЛИВАННЯ ================= */
+    /* ================= DICTIONARY & APPLE SWIPE ================= */
     const dictList = document.getElementById('dict-list');
-    const dictSearch = document.getElementById('dict-search');
     let currentlySwipedRow = null;
 
     async function renderDictionary(filter = '') {
@@ -409,28 +426,27 @@
       dictList.innerHTML = '';
 
       if (filtered.length === 0) {
-        dictList.innerHTML = `<div class="py-12 text-center text-xs font-mono text-neutral-400">Слів не знайдено</div>`;
+        dictList.innerHTML = `<div class="py-12 text-center text-xs font-mono text-neutral-400">No expressions found</div>`;
         return;
       }
 
       filtered.forEach(card => {
-        // Контейнер рядка: фоновий колір нейтральний (#FAFAFA), жодного червоного фону!
         const itemWrapper = document.createElement('div');
         itemWrapper.className = "relative overflow-hidden rounded-2xl select-none";
         
         itemWrapper.innerHTML = `
-          <!-- Задня зона: тільки нейтральне тло та ЧЕРВОНА ІКОНКА СМІТНИКА -->
+          <!-- Trash zone behind -->
           <div class="absolute inset-y-0 right-0 w-[64px] flex items-center justify-center text-red-500 active:opacity-70 transition-opacity" data-delete-id="${card.id}">
             <i data-lucide="trash-2" class="w-5 h-5 text-red-500 stroke-[1.75]"></i>
           </div>
 
-          <!-- Верхній шар: суцільна біла картка з акуратною сірою рамкою -->
+          <!-- Foreground Card -->
           <div class="swipe-content relative bg-white border border-neutral-200/80 rounded-2xl px-4 py-3.5 flex items-center justify-between z-10">
             <div class="flex-1 min-w-0 pr-3 pointer-events-none">
               <div class="flex items-center gap-2">
                 <h4 class="text-sm font-medium text-neutral-950 truncate">${card.phrase}</h4>
                 <span class="text-[9px] font-mono text-neutral-400 border border-neutral-200/80 rounded px-1.5 py-0.2">
-                  ${card.reps || 0} повт
+                  ${card.reps || 0} reps
                 </span>
               </div>
               ${card.example ? `<p class="text-xs text-neutral-500 font-light truncate mt-0.5">${card.example}</p>` : ''}
@@ -462,7 +478,7 @@
     function initSwipeGesture(cardContent, deleteBtn, cardId) {
       let startX = 0;
       let isSwiping = false;
-      const threshold = 64; // Відстань свайпу під іконку
+      const threshold = 64;
 
       function setTransform(x, transition = false) {
         cardContent.style.transition = transition ? 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
@@ -481,12 +497,8 @@
       cardContent.addEventListener('touchmove', (e) => {
         if (!isSwiping) return;
         let diff = e.touches[0].clientX - startX;
-
-        // Лише свайп ліворуч
         if (diff < 0) {
-          if (diff < -threshold) {
-            diff = -threshold + (diff + threshold) * 0.2; // легкий супротив
-          }
+          if (diff < -threshold) diff = -threshold + (diff + threshold) * 0.2;
           setTransform(diff, false);
         } else {
           setTransform(0, false);
@@ -507,7 +519,6 @@
         }
       });
 
-      // Тап по червоному смітнику -> видалення
       deleteBtn.addEventListener('click', async () => {
         const wrapper = cardContent.parentElement;
         wrapper.style.transition = 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
@@ -524,14 +535,13 @@
             await deleteCard(cardId);
             const allCards = await getCards();
             updateBadges(allCards.length, queue.length);
-            await renderDictionary(dictSearch.value);
+            await renderDictionary(document.getElementById('dict-search').value);
             await initQueue();
           }, 180);
         }, 120);
       });
     }
 
-    // Закриття відкритого свайпу при кліку в іншому місці
     document.addEventListener('touchstart', (e) => {
       if (currentlySwipedRow && !currentlySwipedRow.contains(e.target) && !e.target.closest('[data-delete-id]')) {
         currentlySwipedRow.style.transform = 'translateX(0px)';
@@ -539,11 +549,63 @@
       }
     });
 
+    /* ================= iOS SPOTLIGHT SEARCH MECHANICS ================= */
+    const spotlightOverlay = document.getElementById('spotlight-overlay');
+    const spotlightPanel = document.getElementById('spotlight-panel');
+    const dictSearch = document.getElementById('dict-search');
+    const closeSpotlightBtn = document.getElementById('close-spotlight-btn');
+
+    function openSpotlight() {
+      spotlightOverlay.classList.remove('hidden');
+      setTimeout(() => {
+        spotlightOverlay.classList.remove('opacity-0');
+        spotlightPanel.classList.remove('-translate-y-full');
+        dictSearch.focus();
+      }, 10);
+    }
+
+    function closeSpotlight() {
+      spotlightOverlay.classList.add('opacity-0');
+      spotlightPanel.classList.add('-translate-y-full');
+      dictSearch.value = '';
+      dictSearch.blur();
+      renderDictionary('');
+      setTimeout(() => {
+        spotlightOverlay.classList.add('hidden');
+      }, 200);
+    }
+
+    closeSpotlightBtn.addEventListener('click', closeSpotlight);
+
+    spotlightOverlay.addEventListener('click', (e) => {
+      if (e.target === spotlightOverlay) closeSpotlight();
+    });
+
     dictSearch.addEventListener('input', (e) => {
       renderDictionary(e.target.value);
     });
 
-    /* Modal Add */
+    // Detect Pull-Down gesture on dictionary to open Spotlight
+    let pullStartY = 0;
+    viewDictionary.addEventListener('touchstart', (e) => {
+      if (viewDictionary.scrollTop <= 0) {
+        pullStartY = e.touches[0].clientY;
+      } else {
+        pullStartY = 0;
+      }
+    }, { passive: true });
+
+    viewDictionary.addEventListener('touchmove', (e) => {
+      if (pullStartY > 0 && viewDictionary.scrollTop <= 0) {
+        const pullDistance = e.touches[0].clientY - pullStartY;
+        if (pullDistance > 60) {
+          pullStartY = 0;
+          openSpotlight();
+        }
+      }
+    }, { passive: true });
+
+    /* ================= ADD EXPRESSION MODAL ================= */
     const modal = document.getElementById('add-modal');
     const inPhrase = document.getElementById('in-phrase');
     const inExample = document.getElementById('in-example');
