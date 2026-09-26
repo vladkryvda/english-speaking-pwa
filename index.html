@@ -37,15 +37,14 @@
       transition: background-color 0.25s ease, color 0.25s ease;
     }
 
-    /* РЕЖИМ ЗАПИСУ: ПОВНА OLED ТЕМРЯВА */
+    /* РЕЖИМ ЗАПИСУ: ЧИСТА OLED ТЕМРЯВА */
     body.is-recording {
       background-color: #000000 !important;
       color: #FFFFFF !important;
     }
 
     body.is-recording #top-bar,
-    body.is-recording #btn-refresh-prompt,
-    body.is-recording .word-hint {
+    body.is-recording #btn-refresh-prompt {
       opacity: 0 !important;
       pointer-events: none !important;
     }
@@ -56,6 +55,11 @@
 
     body.is-recording .word-text {
       color: #FFFFFF !important;
+    }
+
+    /* Підказка під час запису адаптується під чорний фон */
+    body.is-recording .word-hint {
+      color: #888888 !important;
     }
 
     body.is-recording #mic-btn {
@@ -71,7 +75,7 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Плавне розкриття прихованого речення */
+    /* Плавне розкриття прихованого прикладу */
     .word-hint {
       max-height: 0;
       opacity: 0;
@@ -79,9 +83,10 @@
       transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, margin 0.2s ease;
     }
     .word-hint.is-open {
-      max-height: 60px;
-      opacity: 1;
+      max-height: 80px;
+      opacity: 1 !important;
       margin-top: 0.35rem;
+      pointer-events: auto !important;
     }
 
     /* Інтерактивні слова у стані рефлексії */
@@ -96,40 +101,35 @@
       color: #A3A3A3 !important;
     }
 
-    /* Переходи між практикою та бібліотекою (Swipe) */
+    /* Горизонтальний свайп екранів */
     .view-slider {
       transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    #add-modal input, #add-modal textarea {
-      background-color: #FFFFFF !important;
-      color: #171717 !important;
+    /* Анімація шторки додавання слів (Bottom Sheet) */
+    #add-sheet {
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
   </style>
 </head>
 <body class="w-screen h-full relative overflow-hidden">
 
-  <!-- ================= ГОЛОВНИЙ КОНТЕЙНЕР (ГОРИЗОНТАЛЬНИЙ СВАЙП) ================= -->
+  <!-- ================= ГОЛОВНИЙ СЛАЙДЕР (СВАЙП НАВІГАЦІЯ) ================= -->
   <div id="view-slider" class="view-slider flex w-[200vw] h-full">
 
-    <!-- ================= 1. ЕКРАН ПРАКТИКИ (ЧИСТИЙ ДЗЕН) ================= -->
+    <!-- ================= 1. ЕКРАН ПРАКТИКИ ================= -->
     <section id="view-practice" class="w-screen h-full flex flex-col justify-between px-7 pb-8 pt-3 relative flex-shrink-0">
       
-      <!-- Мінімальний верхній рядок: лише ненав'язливий перехід у бібліотеку -->
-      <div id="top-bar" class="w-full flex justify-between items-center z-10 transition-opacity duration-200">
-        <button id="open-library-btn" title="Library (or swipe left)" class="text-xs font-mono text-neutral-300 hover:text-neutral-950 transition-colors py-1 flex items-center gap-1 active:scale-95">
-          <span>Library</span>
-          <span class="text-[10px]">→</span>
-        </button>
-
-        <button id="open-add-btn" title="Add expression" class="text-neutral-300 hover:text-neutral-950 transition-colors p-1 active:scale-90">
+      <!-- Верхній рядок: тільки тонкий «+» праворуч (жодних кнопок бібліотеки) -->
+      <div id="top-bar" class="w-full flex justify-end items-center z-10 transition-opacity duration-200">
+        <button id="open-add-btn" title="Add expression" class="text-neutral-300 hover:text-neutral-950 transition-colors p-1.5 active:scale-90">
           <i data-lucide="plus" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
       </div>
 
-      <!-- ТЕМА СЦЕНАРІЮ (ТИХИЙ ШЕПІТ УГОРІ) -->
-      <div id="scenario-container" class="w-full flex flex-col items-center text-center mt-2">
-        <div class="flex items-center gap-2 group">
+      <!-- ТЕМА СЦЕНАРІЮ (Кнопка оновлення зникає під час запису) -->
+      <div id="scenario-container" class="w-full flex flex-col items-center text-center mt-1">
+        <div class="flex items-center gap-2">
           <p id="prompt-question" class="text-xs sm:text-sm font-light text-neutral-400 leading-relaxed max-w-xs transition-colors">
             Loading scenario...
           </p>
@@ -139,25 +139,25 @@
         </div>
       </div>
 
-      <!-- 3 ВЕЛИКІ СЛОВА В СТОВПЧИК (БЕЗ НУМЕРАЦІЇ, ПРИКЛАД ВІДКРИВАЄТЬСЯ ПО ТАПУ) -->
+      <!-- 3 ВЕЛИКІ СЛОВА В СТОВПЧИК (Підказки розгортаються по тапу і в спокої, і під час запису!) -->
       <div id="words-container" class="flex-1 flex flex-col justify-center items-center space-y-8 sm:space-y-10 my-auto w-full">
-        <!-- 3 слова генеруються через JS -->
+        <!-- Слова генеруються динамічно -->
       </div>
 
-      <!-- ПІДКАЗКА РЕФЛЕКСІЇ (З'являється тільки після запису) -->
+      <!-- ПІДКАЗКА РЕФЛЕКСІЇ (Тільки після запису) -->
       <div id="reflection-hint" class="hidden text-center text-[11px] font-mono uppercase tracking-widest text-neutral-400 mb-2">
         Tap words you used
       </div>
 
-      <!-- НИЖНЯ ЗОНА ДІЇ (ЗАПИС АБО ЗБЕРЕЖЕННЯ РЕФЛЕКСІЇ) -->
+      <!-- НИЖНЯ ЗОНА ДІЇ -->
       <div id="action-zone" class="w-full flex flex-col items-center">
         
-        <!-- Стан 1: Кнопка запису -->
+        <!-- Кнопка запису -->
         <button id="mic-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-all shadow-md flex items-center justify-center">
           <div id="stop-square" class="w-4 h-4 rounded-sm bg-white hidden"></div>
         </button>
 
-        <!-- Стан 2: Елементи рефлексії на місці (Слухати + Завершити) -->
+        <!-- Елементи рефлексії на місці -->
         <div id="reflection-controls" class="hidden flex items-center gap-4">
           <button id="btn-play-self" title="Listen" class="w-12 h-12 rounded-full border border-neutral-200 bg-white flex items-center justify-center active:scale-90 transition-transform">
             <i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>
@@ -171,17 +171,17 @@
 
     </section>
 
-    <!-- ================= 2. БІБЛІОТЕКА: СЛОВНИК + АРХІВ + СТРІК (СВАЙП ВЛІВО) ================= -->
+    <!-- ================= 2. БІБЛІОТЕКА (ВХІД ЧЕРЕЗ СВАЙП ВЛІВО) ================= -->
     <section id="view-library" class="w-screen h-full flex flex-col px-7 pb-8 pt-3 relative flex-shrink-0 bg-[#FAFAFA]">
       
-      <!-- Верхній рядок: повернення в практику -->
+      <!-- Верхній рядок Бібліотеки -->
       <div class="w-full flex justify-between items-center mb-4">
         <button id="close-library-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-950 transition-colors py-1 flex items-center gap-1 active:scale-95">
           <span class="text-[10px]">←</span>
           <span>Practice</span>
         </button>
 
-        <!-- МІНІМАЛІСТИЧНИЙ СТРІК ТУТ, ДЕ ЙОМУ МІСЦЕ -->
+        <!-- МІНІМАЛЬНИЙ СТРІК -->
         <div class="flex items-center gap-1 text-[11px] font-mono text-neutral-500">
           <span id="streak-icon">●</span>
           <span id="streak-count">0</span>
@@ -189,7 +189,7 @@
         </div>
       </div>
 
-      <!-- Вкладки Бібліотеки: Слова / Записи -->
+      <!-- Вкладки Бібліотеки -->
       <div class="flex items-center gap-4 border-b border-neutral-200/80 pb-2 mb-3">
         <button id="subtab-words" class="text-xs font-mono uppercase tracking-wider font-medium text-neutral-950 transition-colors">
           Words (<span id="words-count">0</span>)
@@ -199,49 +199,54 @@
         </button>
       </div>
 
-      <!-- Списки слів або аудіо -->
+      <!-- Контент Бібліотеки -->
       <div id="library-content" class="flex-1 overflow-y-auto overscroll-y-contain space-y-2 pb-12">
-        <!-- Контент слів або аудіо -->
+        <!-- Списки -->
       </div>
 
     </section>
 
   </div>
 
-  <!-- ================= ADD MODAL ================= -->
-  <div id="add-modal" class="fixed inset-0 bg-neutral-900/10 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-6 border border-neutral-200/80 shadow-2xl relative">
-      <div class="flex justify-between items-center mb-5">
-        <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">New Expression</span>
-        <button onclick="closeModal()" class="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-900">
-          <i data-lucide="x" class="w-4 h-4 stroke-[1.5]"></i>
-        </button>
+  <!-- ================= FLUID BOTTOM SHEET (ШВИДКЕ ДОДАВАННЯ СЛОВА) ================= -->
+  <div id="add-sheet-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-200 flex flex-col justify-end">
+    <div id="add-sheet" class="w-full max-w-md mx-auto bg-white rounded-t-[32px] p-6 pt-3 shadow-2xl border-t border-neutral-100 translate-y-full">
+      
+      <!-- Ручка для закриття свайпом -->
+      <div class="w-9 h-1 rounded-full bg-neutral-200 mx-auto mb-4"></div>
+      
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">New Expression</span>
+        <button id="close-sheet-btn" class="text-neutral-400 hover:text-neutral-900 text-xs font-mono p-1">Cancel</button>
       </div>
 
-      <form id="add-form" class="space-y-4">
+      <!-- Лаконічна інлайн форма без рамок -->
+      <form id="add-sheet-form" class="space-y-4">
         <div>
-          <input type="text" id="in-phrase" required placeholder="Word or phrase" autocomplete="off"
-                 class="w-full bg-white px-3.5 py-3 rounded-xl border border-neutral-200 text-sm font-normal text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors">
+          <input type="text" id="sheet-phrase" required placeholder="Word or expression" autocomplete="off"
+                 class="w-full text-base font-normal text-neutral-950 placeholder-neutral-300 focus:outline-none border-b border-neutral-100 pb-2 bg-transparent transition-colors">
         </div>
 
         <div>
-          <textarea id="in-example" rows="2" placeholder="Example sentence (optional)" autocomplete="off"
-                    class="w-full bg-white px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-light text-neutral-700 placeholder-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors resize-none"></textarea>
+          <input type="text" id="sheet-example" placeholder="Example context (optional)" autocomplete="off"
+                 class="w-full text-xs font-light text-neutral-600 placeholder-neutral-300 focus:outline-none border-b border-neutral-100 pb-2 bg-transparent transition-colors">
         </div>
 
-        <div class="pt-2 flex items-center justify-end">
+        <div class="pt-2 flex items-center justify-between">
+          <span class="text-[10px] font-mono text-neutral-400">↵ Enter to save</span>
           <button type="submit" class="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-medium tracking-wide active:scale-95 transition-all">
             Save
           </button>
         </div>
       </form>
+
     </div>
   </div>
 
   <!-- ================= JS ENGINE ================= -->
   <script>
     /* 1. DATABASE */
-    const DB_NAME = 'vocalize_zen_v11';
+    const DB_NAME = 'vocalize_zen_v12';
     let db;
 
     function openDB() {
@@ -318,14 +323,14 @@
       }
     }
 
-    /* 2. HAPTICS (ТАКТИЛЬНИЙ ВІДГУК) */
+    /* 2. HAPTICS */
     function haptic(ms = 12) {
       if ('vibrate' in navigator) {
         try { navigator.vibrate(ms); } catch (e) {}
       }
     }
 
-    /* 3. STREAK & APP BADGING (PWA) */
+    /* 3. STREAK & BADGING */
     function getLocalDateStr(d = new Date()) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -347,8 +352,7 @@
       }
 
       document.getElementById('streak-count').textContent = streak;
-      
-      // Бейдж на іконку PWA (якщо сьогодні ще не займався — бейдж 1)
+
       if ('setAppBadge' in navigator) {
         if (!history.includes(todayStr)) navigator.setAppBadge(1).catch(() => {});
         else navigator.clearAppBadge().catch(() => {});
@@ -403,16 +407,16 @@
 
       document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
 
-      // 3 ЧИСТІ СЛОВА В СТОВПЧИК (ПРИКЛАД ВІДКРИВАЄТЬСЯ ПО ТАПУ)
+      // 3 СЛОВА В СТОВПЧИК
       const container = document.getElementById('words-container');
       container.innerHTML = '';
       usedWordsMap = {};
 
-      currentTriad.forEach((card, index) => {
+      currentTriad.forEach((card) => {
         usedWordsMap[card.id] = false;
 
         const row = document.createElement('div');
-        row.className = "word-row flex flex-col items-center text-center select-none";
+        row.className = "word-row flex flex-col items-center text-center select-none cursor-pointer";
         row.dataset.id = card.id;
 
         row.innerHTML = `
@@ -422,15 +426,15 @@
           ${card.example ? `<p class="word-hint text-xs text-neutral-400 font-light leading-relaxed max-w-[280px]">“${card.example}”</p>` : ''}
         `;
 
-        // У звичайному стані тап відкриває/ховає приклад
+        // КЛІК НА СЛОВО: ПРАЦЮЄ І У СПОКОЇ, І ПІД ЧАС ЗАПИСУ!
         row.addEventListener('click', () => {
           if (isReflectionMode) {
-            // У стані рефлексії тап відмічає слово
             haptic(8);
             usedWordsMap[card.id] = !usedWordsMap[card.id];
             row.classList.toggle('is-selected', usedWordsMap[card.id]);
-          } else if (!isRecording) {
-            // У спокої тап розгортає приклад
+          } else {
+            // Розгортає підказку (включаючи стан темряви при записі)
+            haptic(6);
             const hint = row.querySelector('.word-hint');
             if (hint) hint.classList.toggle('is-open');
           }
@@ -442,6 +446,7 @@
       exitReflectionMode();
     }
 
+    // Зміна теми заблокована під час запису
     document.getElementById('btn-refresh-prompt').addEventListener('click', () => {
       if (isRecording) return;
       currentPrompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
@@ -502,7 +507,7 @@
           isRecording = true;
           haptic(20);
 
-          // ДЗЕН-РЕЖИМ OLED
+          // ПЕРЕХІД У ДЗЕН-ТЕМРЯВУ
           document.body.classList.add('is-recording');
           metaThemeColor.setAttribute('content', '#000000');
           await requestWakeLock();
@@ -538,22 +543,19 @@
       metaThemeColor.setAttribute('content', '#FAFAFA');
     }
 
-    /* 9. IN-PLACE REFLECTION (РЕФЛЕКСІЯ ПРЯМО ТУТ) */
+    /* 9. IN-PLACE REFLECTION */
     function enterReflectionMode() {
       isReflectionMode = true;
 
-      // Ховаємо кнопку запису, показуємо контролери рефлексії
       micBtn.classList.add('hidden');
       document.getElementById('reflection-controls').classList.remove('hidden');
       document.getElementById('reflection-controls').classList.add('flex');
       document.getElementById('reflection-hint').classList.remove('hidden');
 
-      // Слова отримують статус інтерактивних
       document.querySelectorAll('.word-row').forEach(row => {
         row.classList.add('is-reflection');
       });
 
-      // Скидання плеєра
       if (activePlayerAudio) activePlayerAudio.pause();
       activePlayerAudio = new Audio(lastAudioUrl);
       const playBtn = document.getElementById('btn-play-self');
@@ -593,7 +595,6 @@
 
       const durationSec = Math.max(1, Math.min(60, Math.floor((Date.now() - startTime) / 1000)));
 
-      // Оновлюємо інтервали слів
       for (let card of currentTriad) {
         const wasUsed = usedWordsMap[card.id];
         if (wasUsed) {
@@ -606,7 +607,6 @@
         await saveCard(card);
       }
 
-      // Зберігаємо в аудіо-нотатки
       await saveRecording({
         prompt: currentPrompt,
         triadPhrases: currentTriad.map(c => ({ phrase: c.phrase, used: usedWordsMap[c.id] })),
@@ -619,9 +619,9 @@
       await initPracticeSession();
     });
 
-    /* 10. SWIPE GESTURES & LIBRARY TRANSITION */
+    /* 10. SWIPE GESTURE ENGINE (СВАЙП ВЛІВО ДЛЯ БІБЛІОТЕКИ) */
     const viewSlider = document.getElementById('view-slider');
-    let currentTab = 'practice'; // 'practice' or 'library'
+    let currentTab = 'practice';
 
     function goToLibrary() {
       currentTab = 'library';
@@ -634,36 +634,36 @@
       viewSlider.style.transform = 'translateX(0vw)';
     }
 
-    document.getElementById('open-library-btn').addEventListener('click', goToLibrary);
     document.getElementById('close-library-btn').addEventListener('click', goToPractice);
 
-    // Свайп жести
     let touchStartX = 0;
     let touchStartY = 0;
+    let touchStartTime = 0;
 
     window.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
     }, { passive: true });
 
     window.addEventListener('touchend', (e) => {
-      if (isRecording) return;
+      if (isRecording || isAddSheetOpen) return;
       const diffX = e.changedTouches[0].clientX - touchStartX;
       const diffY = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
 
-      // Горизонтальний свайп (без випадкового скролу)
-      if (Math.abs(diffX) > 60 && Math.abs(diffY) < 50) {
+      // Горизонтальний свайп (дистанція > 50px, час < 600ms)
+      if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3 && elapsed < 600) {
         if (diffX < 0 && currentTab === 'practice') {
-          goToLibrary(); // Свайп вліво -> Бібліотека
+          goToLibrary(); // Свайп справа наліво -> Бібліотека
         } else if (diffX > 0 && currentTab === 'library') {
-          goToPractice(); // Свайп вправо -> Практика
+          goToPractice(); // Свайп зліва направо -> Практика
         }
       }
-    });
+    }, { passive: true });
 
-    /* 11. LIBRARY ENGINE (WORDS + AUDIO NOTES) */
-    let libraryTab = 'words'; // 'words' or 'audio'
-
+    /* 11. LIBRARY (WORDS + AUDIO NOTES) */
+    let libraryTab = 'words';
     const subtabWords = document.getElementById('subtab-words');
     const subtabAudio = document.getElementById('subtab-audio');
     const libraryContent = document.getElementById('library-content');
@@ -753,28 +753,50 @@
       lucide.createIcons();
     }
 
-    /* 12. ADD EXPRESSION MODAL */
-    const modal = document.getElementById('add-modal');
-    const inPhrase = document.getElementById('in-phrase');
-    const inExample = document.getElementById('in-example');
+    /* 12. FLUID BOTTOM SHEET (ШВИДКЕ ДОДАВАННЯ СЛОВА) */
+    const addOverlay = document.getElementById('add-sheet-overlay');
+    const addSheet = document.getElementById('add-sheet');
+    const sheetPhrase = document.getElementById('sheet-phrase');
+    const sheetExample = document.getElementById('sheet-example');
+    let isAddSheetOpen = false;
 
-    window.openModal = () => {
-      modal.classList.remove('hidden');
-      setTimeout(() => inPhrase.focus(), 60);
-    };
+    function openAddSheet() {
+      isAddSheetOpen = true;
+      addOverlay.classList.remove('hidden');
+      setTimeout(() => {
+        addOverlay.classList.remove('opacity-0');
+        addSheet.classList.remove('translate-y-full');
+        sheetPhrase.focus();
+      }, 10);
+    }
 
-    window.closeModal = () => modal.classList.add('hidden');
-    document.getElementById('open-add-btn').addEventListener('click', openModal);
+    function closeAddSheet() {
+      isAddSheetOpen = false;
+      addSheet.classList.add('translate-y-full');
+      addOverlay.classList.add('opacity-0');
+      setTimeout(() => {
+        addOverlay.classList.add('hidden');
+        sheetPhrase.value = '';
+        sheetExample.value = '';
+      }, 250);
+    }
 
-    document.getElementById('add-form').addEventListener('submit', async (e) => {
+    document.getElementById('open-add-btn').addEventListener('click', openAddSheet);
+    document.getElementById('close-sheet-btn').addEventListener('click', closeAddSheet);
+
+    addOverlay.addEventListener('click', (e) => {
+      if (e.target === addOverlay) closeAddSheet();
+    });
+
+    document.getElementById('add-sheet-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const phrase = inPhrase.value.trim();
-      const example = inExample.value.trim();
+      const phrase = sheetPhrase.value.trim();
+      const example = sheetExample.value.trim();
       if (!phrase) return;
 
+      haptic(15);
       await saveCard({ phrase, example, nextDue: 0, reps: 0 });
-      e.target.reset();
-      closeModal();
+      closeAddSheet();
       await initPracticeSession();
       if (currentTab === 'library') renderLibrary();
     });
