@@ -17,8 +17,8 @@
       --text-black: #000000;
       --bg-pure-black: #000000;
       --text-white: #ffffff;
-      --dim-opacity: 0.1;
       --notion-subtle: #8a8a8a;
+      --apple-red: #ff3b30;
     }
 
     * {
@@ -40,8 +40,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
       overscroll-behavior: none;
       -webkit-font-smoothing: antialiased;
-      /* Плавний перехід кольору фону та тексту між чорним і білим */
-      transition: background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: background-color 0.4s cubic-bezier(0.25, 1, 0.3, 1), color 0.4s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
     #viewport {
@@ -51,13 +50,14 @@
       overflow: hidden;
     }
 
+    /* ПЛАВНЕ КОРИСТУВАННЯ ЕКРАНІВ (0.55s замість різкого 0.38s) */
     #track {
       display: flex;
       width: 200%;
       height: 100%;
       transform: translateX(0%);
       will-change: transform;
-      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: transform 0.55s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
     #track.show-archive {
@@ -70,7 +70,7 @@
       position: relative;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      transition: background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: background-color 0.4s cubic-bezier(0.25, 1, 0.3, 1), color 0.4s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
     /* ГОЛОВНИЙ ЕКРАН */
@@ -93,8 +93,13 @@
       justify-content: center;
       gap: 4.8rem;
       width: 100%;
-      /* Плавне розчинення при зміні слів */
-      transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: opacity 0.3s cubic-bezier(0.25, 1, 0.3, 1), transform 0.28s cubic-bezier(0.25, 1, 0.3, 1);
+    }
+
+    /* ПОВНЕ ПРИГЛУШЕННЯ ФОНУ ПРИ ВВОДІ */
+    .words-container.dimmed {
+      opacity: 0 !important;
+      pointer-events: none;
     }
 
     /* ПЛАВНЕ ЗАКРЕСЛЕННЯ СЛОВА */
@@ -106,10 +111,9 @@
       line-height: 1;
       position: relative;
       display: inline-block;
-      transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: opacity 0.3s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
-    /* Анімована лінія викреслювання */
     .word-item::after {
       content: '';
       position: absolute;
@@ -120,7 +124,7 @@
       background-color: currentColor;
       transform: scaleX(0);
       transform-origin: left center;
-      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.3, 1);
       pointer-events: none;
     }
 
@@ -136,7 +140,7 @@
       transform: scale(0.97);
     }
 
-    /* ПОЛЕ ВВОДУ СЛОВА */
+    /* ПОЛЕ ВВОДУ СЛОВА (БЕЗ ПЛЕЙСХОЛДЕРА) */
     #add-word-overlay {
       position: absolute;
       top: 0;
@@ -168,20 +172,13 @@
       caret-color: var(--text-black);
     }
 
-    .new-word-input::placeholder {
-      color: rgba(0, 0, 0, 0.18);
-    }
-
-    .words-container.dimmed {
-      opacity: var(--dim-opacity);
-    }
-
-    /* СЛОВНИК (БЕЗ ЗАГОЛОВКА, ЧИСТИЙ NOTION) */
+    /* СЛОВНИК-ІНБОКС */
     #archive-page {
       background-color: var(--bg-white);
       color: var(--text-black);
-      padding: calc(3rem + env(safe-area-inset-top)) 2.2rem env(safe-area-inset-bottom) 2.2rem;
+      padding: calc(3rem + env(safe-area-inset-top)) 0 env(safe-area-inset-bottom) 0;
       overflow-y: auto;
+      overflow-x: hidden;
       user-select: text;
       -webkit-user-select: text;
     }
@@ -190,13 +187,46 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 1.6rem;
     }
 
-    .archive-item {
+    /* SWIPE-TO-DELETE (APPLE STYLE) */
+    .swipe-wrapper {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.25, 1, 0.3, 1), opacity 0.3s ease;
+      max-height: 100px;
+    }
+
+    .swipe-wrapper.deleted {
+      max-height: 0 !important;
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+
+    .swipe-content {
+      position: relative;
+      z-index: 2;
+      background-color: var(--bg-white);
+      padding: 0.85rem 2.2rem;
+      transition: transform 0.28s cubic-bezier(0.25, 1, 0.3, 1);
       display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
+      align-items: center;
+    }
+
+    .swipe-delete-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 76px;
+      background-color: var(--apple-red);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      cursor: pointer;
     }
 
     .archive-word {
@@ -205,34 +235,26 @@
       letter-spacing: -0.02em;
     }
 
-    .archive-recordings {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
     .audio-row {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      font-size: 0.8rem;
+      gap: 0.8rem;
+      font-size: 0.85rem;
       color: var(--notion-subtle);
       cursor: pointer;
       width: fit-content;
-    }
-
-    .audio-row:active {
-      opacity: 0.5;
+      user-select: none;
     }
 
     .play-icon {
-      font-size: 0.75rem;
-      width: 12px;
+      font-size: 0.85rem;
+      width: 16px;
       display: inline-block;
+      color: #000;
     }
 
     .rec-date {
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       color: var(--notion-subtle);
     }
   </style>
@@ -246,11 +268,11 @@
       <div class="words-container" id="words-container"></div>
       
       <div id="add-word-overlay">
-        <input type="text" id="new-word-input" class="new-word-input" placeholder="new word" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        <input type="text" id="new-word-input" class="new-word-input" autocomplete="off" autocapitalize="none" spellcheck="false" />
       </div>
     </section>
 
-    <!-- СТОРІНКА 2: СЛОВНИК (БЕЗ ЗАГОЛОВКА) -->
+    <!-- СТОРІНКА 2: СЛОВНИК-ІНБОКС -->
     <section id="archive-page" class="page">
       <div class="archive-list" id="archive-list"></div>
     </section>
@@ -260,7 +282,7 @@
 <script>
 /* ================= 1. БАЗА ДАНИХ (INDEXEDDB) ================= */
 const DB_NAME = 'SpeakingSRS_DB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let db;
 
 function initDB() {
@@ -283,13 +305,13 @@ async function seedInitialWords() {
   const words = await getAllWords();
   if (words.length === 0) {
     const list = ['figure out', 'whatever', 'sometimes', 'frank', 'creep', 'freak'];
-    for (const text of list) {
+    for (let i = 0; i < list.length; i++) {
       await saveWord({
-        id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        text: text,
+        id: 'w_' + (Date.now() + i),
+        text: list[i],
         level: 0,
         nextReview: 0,
-        createdAt: Date.now()
+        createdAt: Date.now() + i
       });
     }
   }
@@ -315,16 +337,23 @@ function saveWord(word) {
   });
 }
 
-// Безпечне збереження аудіо (сумісне з iOS Safari)
+function deleteWordFromDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction('words', 'readwrite');
+    tx.objectStore('words').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+}
+
 async function saveRecordingSafe(rec) {
   return new Promise(async (resolve) => {
     if (!db) return resolve();
     try {
       let audioBuffer = null;
       if (rec.blob && rec.blob.arrayBuffer) {
-        try {
-          audioBuffer = await rec.blob.arrayBuffer();
-        } catch (e) {}
+        try { audioBuffer = await rec.blob.arrayBuffer(); } catch (e) {}
       }
 
       const tx = db.transaction('recordings', 'readwrite');
@@ -333,12 +362,12 @@ async function saveRecordingSafe(rec) {
         date: rec.date,
         words: rec.words,
         audioBuffer: audioBuffer,
-        mimeType: rec.blob ? rec.blob.type : 'audio/webm'
+        mimeType: rec.mimeType || 'audio/mp4',
+        createdAt: rec.createdAt || Date.now()
       });
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     } catch (err) {
-      console.warn('saveRecording failed:', err);
       resolve();
     }
   });
@@ -351,6 +380,16 @@ function getAllRecordings() {
     const req = tx.objectStore('recordings').getAll();
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => resolve([]);
+  });
+}
+
+function deleteRecordingFromDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction('recordings', 'readwrite');
+    tx.objectStore('recordings').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
   });
 }
 
@@ -392,10 +431,11 @@ async function pickThreeWords() {
   return pool.slice(0, 3);
 }
 
-/* ================= 4. АУДІОЗАПИС ТА СИГНАЛ ================= */
+/* ================= 4. АУДІОЗАПИС ТА ЗВУК ================= */
 let audioCtx = null;
 let mediaRecorder = null;
 let audioChunks = [];
+let recordedMimeType = 'audio/mp4';
 let beepTimeout = null;
 let maxLimitTimeout = null;
 
@@ -418,7 +458,20 @@ function playBeep() {
 async function startAudioRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
+    
+    // Сумісність iOS / Android
+    recordedMimeType = 'audio/mp4';
+    if (typeof MediaRecorder.isTypeSupported === 'function') {
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        recordedMimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        recordedMimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        recordedMimeType = 'audio/webm';
+      }
+    }
+
+    mediaRecorder = new MediaRecorder(stream, recordedMimeType ? { mimeType: recordedMimeType } : {});
     audioChunks = [];
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.push(e.data);
@@ -444,7 +497,7 @@ function stopAudioRecording() {
       return;
     }
     mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const blob = new Blob(audioChunks, { type: recordedMimeType });
       mediaRecorder.stream.getTracks().forEach(t => t.stop());
       resolve(blob);
     };
@@ -452,7 +505,7 @@ function stopAudioRecording() {
   });
 }
 
-/* ================= 5. УПРАВЛІННЯ UI ТА ПЕРЕХОДАМИ ================= */
+/* ================= 5. УПРАВЛІННЯ UI ================= */
 let appState = 'idle'; 
 let currentWords = [];
 let struckWordIds = new Set();
@@ -493,9 +546,7 @@ async function stopSession() {
   setTimeout(() => wordsContainer.classList.remove('pulse-finish'), 150);
 }
 
-// Завершення сесії: плавний перехід і гарантований тап
 async function completeReviewAndRefresh() {
-  // Плавне розчинення старих слів
   wordsContainer.style.opacity = '0';
 
   try {
@@ -515,14 +566,13 @@ async function completeReviewAndRefresh() {
         id: 'rec_' + Date.now(),
         date: new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }),
         blob: lastRecordedBlob,
-        words: currentWords.map(w => w.text)
+        mimeType: recordedMimeType,
+        words: currentWords.map(w => w.text),
+        createdAt: Date.now()
       });
     }
-  } catch (err) {
-    console.warn('Review save error:', err);
-  }
+  } catch (err) {}
 
-  // Плавна зміна теми на білу
   setSystemBarsTheme(false);
   appState = 'idle';
 
@@ -532,11 +582,11 @@ async function completeReviewAndRefresh() {
   }, 180);
 }
 
-/* ================= 6. ДОДАВАННЯ СЛІВ ================= */
+/* ================= 6. ДОДАВАННЯ СЛІВ (ТІЛЬКИ ENTER) ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
-  wordsContainer.classList.add('dimmed');
+  wordsContainer.classList.add('dimmed'); // Повне приглушення
   addWordOverlay.classList.add('active');
   newWordInput.value = '';
   newWordInput.focus();
@@ -546,13 +596,13 @@ async function closeAndSaveNewWord() {
   const text = newWordInput.value.trim().toLowerCase();
   if (text) {
     const parts = text.split(/[,+\n]/).map(s => s.trim()).filter(Boolean);
-    for (const p of parts) {
+    for (let i = 0; i < parts.length; i++) {
       await saveWord({
-        id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        text: p,
+        id: 'w_' + (Date.now() + i),
+        text: parts[i],
         level: 0,
         nextReview: 0,
-        createdAt: Date.now()
+        createdAt: Date.now() + i
       });
     }
   }
@@ -563,54 +613,159 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-/* ================= 7. СЛОВНИК ================= */
+/* ================= 7. СЛОВНИК-ІНБОКС ТА АУДІОПЛЕЄР ================= */
+let activeAudio = null;
+let activeAudioId = null;
+let activePlayBtn = null;
+
+function handlePlayPause(rec, btn) {
+  if (activeAudioId === rec.id && activeAudio) {
+    if (activeAudio.paused) {
+      activeAudio.play();
+      btn.textContent = '❚❚';
+    } else {
+      activeAudio.pause();
+      btn.textContent = '▶';
+    }
+    return;
+  }
+
+  if (activeAudio) {
+    activeAudio.pause();
+    if (activePlayBtn) activePlayBtn.textContent = '▶';
+  }
+
+  let audioBlob = rec.blob;
+  if (!audioBlob && rec.audioBuffer) {
+    audioBlob = new Blob([rec.audioBuffer], { type: rec.mimeType || 'audio/mp4' });
+  }
+  if (!audioBlob) return;
+
+  const audioUrl = URL.createObjectURL(audioBlob);
+  activeAudio = new Audio(audioUrl);
+  activeAudioId = rec.id;
+  activePlayBtn = btn;
+
+  btn.textContent = '❚❚';
+  activeAudio.play().catch(e => console.warn(e));
+
+  activeAudio.onended = () => {
+    btn.textContent = '▶';
+    activeAudio = null;
+    activeAudioId = null;
+    activePlayBtn = null;
+  };
+  activeAudio.onpause = () => {
+    btn.textContent = '▶';
+  };
+}
+
 async function renderArchiveList() {
   const words = await getAllWords();
   const recordings = await getAllRecordings();
-  words.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  // Об'єднуємо в єдиний chronologic feed (Inbox)
+  const feed = [
+    ...words.map(w => ({ type: 'word', item: w, createdAt: w.createdAt || 0 })),
+    ...recordings.map(r => ({ type: 'recording', item: r, createdAt: r.createdAt || 0 }))
+  ];
+  feed.sort((a, b) => b.createdAt - a.createdAt);
 
   archiveList.innerHTML = '';
-  words.forEach(w => {
-    const item = document.createElement('div');
-    item.className = 'archive-item';
-    
-    const matchedRecs = recordings.filter(r => r.words && r.words.includes(w.text));
-    let recsHtml = '';
-    matchedRecs.forEach(r => {
-      recsHtml += `
-        <div class="audio-row" data-id="${r.id}">
+  feed.forEach(entry => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'swipe-wrapper';
+
+    let contentHtml = '';
+    if (entry.type === 'word') {
+      contentHtml = `<div class="archive-word">${entry.item.text}</div>`;
+    } else {
+      contentHtml = `
+        <div class="audio-row" data-id="${entry.item.id}">
           <span class="play-icon">▶</span>
-          <span class="rec-date">${r.date}</span>
+          <span class="rec-date">${entry.item.date}</span>
         </div>
       `;
-    });
+    }
 
-    item.innerHTML = `
-      <div class="archive-word">${w.text}</div>
-      ${recsHtml ? `<div class="archive-recordings">${recsHtml}</div>` : ''}
+    wrapper.innerHTML = `
+      <div class="swipe-content">${contentHtml}</div>
+      <div class="swipe-delete-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </div>
     `;
-    archiveList.appendChild(item);
-  });
 
-  archiveList.querySelectorAll('.audio-row').forEach(row => {
-    row.onclick = (e) => {
+    // Аудіоплеєр клік
+    if (entry.type === 'recording') {
+      const audioRow = wrapper.querySelector('.audio-row');
+      const playIcon = wrapper.querySelector('.play-icon');
+      audioRow.onclick = (e) => {
+        e.stopPropagation();
+        handlePlayPause(entry.item, playIcon);
+      };
+    }
+
+    // Видалення
+    const deleteBtn = wrapper.querySelector('.swipe-delete-btn');
+    deleteBtn.onclick = async (e) => {
       e.stopPropagation();
-      const rec = recordings.find(r => r.id === row.dataset.id);
-      if (!rec) return;
-
-      let audioBlob = rec.blob;
-      if (!audioBlob && rec.audioBuffer) {
-        audioBlob = new Blob([rec.audioBuffer], { type: rec.mimeType || 'audio/webm' });
+      wrapper.classList.add('deleted');
+      if (entry.type === 'word') {
+        await deleteWordFromDB(entry.item.id);
+      } else {
+        await deleteRecordingFromDB(entry.item.id);
+        if (activeAudioId === entry.item.id && activeAudio) {
+          activeAudio.pause();
+          activeAudio = null;
+        }
       }
-      if (!audioBlob) return;
-
-      const icon = row.querySelector('.play-icon');
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      icon.textContent = '❚❚';
-      audio.play();
-      audio.onended = () => { icon.textContent = '▶'; };
+      setTimeout(() => wrapper.remove(), 350);
     };
+
+    // Жест свайпу для видалення (Swipe-to-delete)
+    attachSwipeToDelete(wrapper);
+
+    archiveList.appendChild(wrapper);
+  });
+}
+
+// Реалізація Apple-style свайпу по елементу
+function attachSwipeToDelete(wrapper) {
+  const content = wrapper.querySelector('.swipe-content');
+  let itemStartX = 0;
+  let itemCurrentX = 0;
+  let isOpen = false;
+
+  content.addEventListener('touchstart', (e) => {
+    itemStartX = e.touches[0].clientX;
+    content.style.transition = 'none';
+  }, { passive: true });
+
+  content.addEventListener('touchmove', (e) => {
+    const diff = e.touches[0].clientX - itemStartX;
+    if (!isOpen && diff < 0) {
+      itemCurrentX = Math.max(diff, -76);
+      content.style.transform = `translateX(${itemCurrentX}px)`;
+    } else if (isOpen && diff > 0) {
+      itemCurrentX = Math.min(-76 + diff, 0);
+      content.style.transform = `translateX(${itemCurrentX}px)`;
+    }
+  }, { passive: true });
+
+  content.addEventListener('touchend', () => {
+    content.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.3, 1)';
+    if (!isOpen && itemCurrentX < -38) {
+      content.style.transform = 'translateX(-76px)';
+      isOpen = true;
+    } else if (isOpen && itemCurrentX > -38) {
+      content.style.transform = 'translateX(0px)';
+      isOpen = false;
+    } else {
+      content.style.transform = isOpen ? 'translateX(-76px)' : 'translateX(0px)';
+    }
   });
 }
 
@@ -623,6 +778,10 @@ function openArchive() {
 function closeArchive() {
   track.classList.remove('show-archive');
   appState = 'idle';
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio = null;
+  }
 }
 
 /* ================= 8. ЖЕСТИ ТА ТАПИ ================= */
@@ -647,22 +806,22 @@ window.addEventListener('pointerup', async (e) => {
   const absX = Math.abs(diffX);
   const absY = Math.abs(diffY);
 
-  // Поріг 45px для свайпу
   if (absX > 45 || absY > 45) {
     didSwipe = true;
 
+    // Свайп вниз на головному -> введення слова
     if (diffY > 45 && absY > absX && appState === 'idle') {
       openAddWord();
       return;
     }
-    if (diffY < -45 && absY > absX && appState === 'adding') {
-      await closeAndSaveNewWord();
-      return;
-    }
+
+    // Свайп вліво -> відкрити словник
     if (diffX < -45 && absX > absY && appState === 'idle') {
       openArchive();
       return;
     }
+
+    // Свайп вправо -> закрити словник
     if (diffX > 45 && absX > absY && appState === 'archive') {
       closeArchive();
       return;
@@ -670,7 +829,7 @@ window.addEventListener('pointerup', async (e) => {
   }
 });
 
-// Клік / Тап
+// Клік / Тап по екрану
 document.getElementById('main-page').addEventListener('click', async (e) => {
   if (didSwipe) return;
 
@@ -696,12 +855,12 @@ document.getElementById('main-page').addEventListener('click', async (e) => {
         wordEl.classList.add('struck');
       }
     } else {
-      // ТАП ПО ПОРОЖНЬОМУ ФОНУ -> ПЕРЕХІД
       await completeReviewAndRefresh();
     }
   }
 });
 
+// ДОДАВАННЯ СЛОВА ТІЛЬКИ НА ENTER
 newWordInput.addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
     await closeAndSaveNewWord();
