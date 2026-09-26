@@ -15,7 +15,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Vocalize">
   <meta name="theme-color" content="#FAFAFA" id="meta-theme-color">
-  <meta name="msapplication-navbutton-color" content="#FAFAFA">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -38,239 +37,183 @@
       transition: background-color 0.25s ease, color 0.25s ease;
     }
 
-    /* OLED TRUE BLACK ПРИ ЗАПИСІ */
-    html.oled-mode, body.oled-mode {
+    /* РЕЖИМ ЗАПИСУ: ПОВНА OLED ТЕМРЯВА */
+    body.is-recording {
       background-color: #000000 !important;
-      color: #EDEDED !important;
-    }
-
-    .oled-mode header,
-    .oled-mode #scenario-header {
-      opacity: 0.15;
-      transition: opacity 0.3s ease;
-    }
-
-    .oled-mode #prompt-question {
-      color: #525252 !important;
-    }
-
-    .oled-mode .practice-word-phrase {
       color: #FFFFFF !important;
     }
 
-    .oled-mode .practice-word-example {
-      color: #525252 !important;
+    body.is-recording #top-bar,
+    body.is-recording #btn-refresh-prompt,
+    body.is-recording .word-hint {
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
-    .oled-mode #mic-toggle-btn {
+    body.is-recording #prompt-question {
+      color: #666666 !important;
+    }
+
+    body.is-recording .word-text {
+      color: #FFFFFF !important;
+    }
+
+    body.is-recording #mic-btn {
       background-color: #000000 !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.05) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
     }
 
-    .oled-mode #timer-display {
-      color: #8A8A8A !important;
-    }
-
-    .oled-mode #streak-wrapper .bg-neutral-950 {
-      background-color: #FFFFFF !important;
-    }
-    .oled-mode #streak-wrapper .bg-neutral-200,
-    .oled-mode #streak-wrapper .bg-neutral-200\/80 {
-      background-color: #262626 !important;
-    }
-    .oled-mode #streak-count {
-      color: #737373 !important;
+    body.is-recording #stop-square {
+      display: block !important;
     }
 
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
 
-    .card-transition {
-      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    /* Плавне розкриття прихованого речення */
+    .word-hint {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, margin 0.2s ease;
+    }
+    .word-hint.is-open {
+      max-height: 60px;
+      opacity: 1;
+      margin-top: 0.35rem;
+    }
+
+    /* Інтерактивні слова у стані рефлексії */
+    .word-row.is-reflection {
+      cursor: pointer;
+    }
+    .word-row.is-reflection .word-text {
+      transition: all 0.2s ease;
+    }
+    .word-row.is-reflection.is-selected .word-text {
+      text-decoration: line-through;
+      color: #A3A3A3 !important;
+    }
+
+    /* Переходи між практикою та бібліотекою (Swipe) */
+    .view-slider {
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     #add-modal input, #add-modal textarea {
       background-color: #FFFFFF !important;
       color: #171717 !important;
     }
-
-    #dict-search {
-      background-color: transparent !important;
-      color: #171717 !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-
-    .swipe-content {
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    #spotlight-panel {
-      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
-    }
   </style>
 </head>
-<body class="w-screen h-full flex flex-col justify-between">
+<body class="w-screen h-full relative overflow-hidden">
 
-  <!-- ULTRA-MINIMAL HEADER З ЛАНЦЮЖКОМ СТРІКУ -->
-  <header class="w-full px-6 pt-2 pb-2 flex justify-between items-center z-20 flex-shrink-0 transition-opacity duration-300">
-    
-    <!-- 1. НАВІГАЦІЯ: КРУГ, СМУГА, ЗАПОВНЕНИЙ КВАДРАТ -->
-    <nav class="flex items-center gap-1">
-      <button id="tab-practice-btn" title="Practice" class="p-2 text-neutral-950 transition-colors active:scale-90 flex items-center justify-center">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="4.5" fill="currentColor" />
-        </svg>
-      </button>
+  <!-- ================= ГОЛОВНИЙ КОНТЕЙНЕР (ГОРИЗОНТАЛЬНИЙ СВАЙП) ================= -->
+  <div id="view-slider" class="view-slider flex w-[200vw] h-full">
 
-      <button id="tab-dictionary-btn" title="Dictionary" class="p-2 text-neutral-300 hover:text-neutral-950 transition-colors active:scale-90 flex items-center justify-center">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="2" y1="7" x2="12" y2="7" />
-        </svg>
-      </button>
+    <!-- ================= 1. ЕКРАН ПРАКТИКИ (ЧИСТИЙ ДЗЕН) ================= -->
+    <section id="view-practice" class="w-screen h-full flex flex-col justify-between px-7 pb-8 pt-3 relative flex-shrink-0">
+      
+      <!-- Мінімальний верхній рядок: лише ненав'язливий перехід у бібліотеку -->
+      <div id="top-bar" class="w-full flex justify-between items-center z-10 transition-opacity duration-200">
+        <button id="open-library-btn" title="Library (or swipe left)" class="text-xs font-mono text-neutral-300 hover:text-neutral-950 transition-colors py-1 flex items-center gap-1 active:scale-95">
+          <span>Library</span>
+          <span class="text-[10px]">→</span>
+        </button>
 
-      <!-- Заповнений чорний квадрат -->
-      <button id="tab-recordings-btn" title="Recordings Archive" class="p-2 text-neutral-300 hover:text-neutral-950 transition-colors active:scale-90 flex items-center justify-center">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
-          <rect x="2.5" y="2.5" width="9" height="9" rx="1.5" fill="currentColor" />
-        </svg>
-      </button>
-    </nav>
-
-    <!-- 2. СТРІК: ЛАНЦЮЖОК ПОЛОСКА-КРАПКА У ЦЕНТРІ -->
-    <div id="streak-wrapper" class="flex items-center gap-1.5 px-2 py-1 select-none">
-      <div id="streak-timeline" class="flex items-center">
-        <!-- Генерується через JS: крапки днів та лінії зв'язку -->
-      </div>
-      <span id="streak-count" class="text-[10px] font-mono text-neutral-400 font-medium ml-1">0</span>
-    </div>
-
-    <!-- 3. ДОДАТИ ВИРАЗ (+) -->
-    <button id="open-add-btn" title="Add Expression" class="p-2 text-neutral-300 hover:text-neutral-950 active:scale-90 transition-colors flex items-center justify-center">
-      <svg class="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <line x1="7" y1="2" x2="7" y2="12" />
-        <line x1="2" y1="7" x2="12" y2="7" />
-      </svg>
-    </button>
-  </header>
-
-  <!-- ================= VIEW 1: PRACTICE ================= -->
-  <main id="view-practice" class="flex-1 flex flex-col justify-between px-6 pb-8 pt-1 relative max-w-md w-full mx-auto overflow-hidden">
-    
-    <!-- 1. ЗОНА СЦЕНАРІЮ (ГАРМОНІЙНО ВГОРІ) -->
-    <div id="scenario-header" class="w-full flex flex-col items-center text-center pt-1 transition-opacity duration-300">
-      <div class="inline-flex items-center gap-1.5 mb-1 text-neutral-400">
-        <span class="text-[9px] font-mono tracking-widest uppercase">Scenario</span>
-        <button id="btn-refresh-prompt" title="Change scenario" class="p-1 hover:text-neutral-950 active:rotate-180 transition-transform text-neutral-400">
-          <i data-lucide="rotate-cw" class="w-3 h-3 stroke-[1.5]"></i>
+        <button id="open-add-btn" title="Add expression" class="text-neutral-300 hover:text-neutral-950 transition-colors p-1 active:scale-90">
+          <i data-lucide="plus" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
       </div>
-      <p id="prompt-question" class="text-xs sm:text-sm font-light text-neutral-500 leading-relaxed max-w-xs transition-colors px-2">
-        Loading scenario...
-      </p>
-    </div>
 
-    <!-- 2. ЦЕНТРАЛЬНА ЗОНА: 3 СЛОВА З ПРИРОДНИМ ПОВІТРЯМ -->
-    <div id="practice-prompt-card" class="flex-1 flex flex-col justify-center items-center w-full py-2">
-      <div id="target-words-container" class="w-full flex flex-col items-center space-y-7 sm:space-y-8">
-        <!-- 3 вирази -->
-      </div>
-    </div>
-
-    <!-- 3. ЗОНА РЕФЛЕКСІЇ (ПІСЛЯ ЗАПИСУ) -->
-    <div id="practice-reflection-card" class="hidden flex-1 flex flex-col justify-center items-center w-full py-4 text-center">
-      <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">Self-Reflection</span>
-      <h3 class="text-sm font-medium text-neutral-950 mb-5">Which expressions did you use naturally?</h3>
-
-      <div class="w-full bg-white border border-neutral-200/80 rounded-2xl p-4 mb-5 flex items-center gap-3 shadow-sm max-w-xs">
-        <button id="btn-reflection-play" class="w-10 h-10 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-transform flex-shrink-0">
-          <i data-lucide="play" class="w-4 h-4 fill-white"></i>
-        </button>
-        <div class="flex-1 text-left min-w-0">
-          <div class="text-xs font-medium text-neutral-900 truncate">Your 1-min thought</div>
-          <div id="reflection-audio-duration" class="text-[10px] font-mono text-neutral-400">00:00</div>
+      <!-- ТЕМА СЦЕНАРІЮ (ТИХИЙ ШЕПІТ УГОРІ) -->
+      <div id="scenario-container" class="w-full flex flex-col items-center text-center mt-2">
+        <div class="flex items-center gap-2 group">
+          <p id="prompt-question" class="text-xs sm:text-sm font-light text-neutral-400 leading-relaxed max-w-xs transition-colors">
+            Loading scenario...
+          </p>
+          <button id="btn-refresh-prompt" title="Change scenario" class="text-neutral-300 hover:text-neutral-950 active:rotate-180 transition-all p-0.5">
+            <i data-lucide="rotate-cw" class="w-3 h-3 stroke-[1.5]"></i>
+          </button>
         </div>
       </div>
 
-      <div class="w-full space-y-2 mb-6 max-w-xs" id="reflection-chips-container"></div>
-
-      <button id="btn-save-reflection" class="w-full max-w-xs py-3.5 rounded-full bg-neutral-950 text-white text-xs font-mono uppercase tracking-wider active:scale-95 transition-all shadow-sm">
-        Complete & Next →
-      </button>
-    </div>
-
-    <!-- Empty State -->
-    <div id="empty-state" class="hidden text-center max-w-xs mx-auto my-auto">
-      <div class="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center mx-auto mb-3 text-neutral-400">
-        <i data-lucide="plus" class="w-4 h-4 stroke-[1.5]"></i>
+      <!-- 3 ВЕЛИКІ СЛОВА В СТОВПЧИК (БЕЗ НУМЕРАЦІЇ, ПРИКЛАД ВІДКРИВАЄТЬСЯ ПО ТАПУ) -->
+      <div id="words-container" class="flex-1 flex flex-col justify-center items-center space-y-8 sm:space-y-10 my-auto w-full">
+        <!-- 3 слова генеруються через JS -->
       </div>
-      <p class="text-sm font-normal text-neutral-900 mb-1">Add your expressions</p>
-      <p class="text-xs text-neutral-400 mb-5">Save at least 3 expressions to unlock the speech challenge.</p>
-      <button onclick="openModal()" class="px-5 py-2 rounded-full border border-neutral-900 text-neutral-900 text-xs font-medium active:scale-95 transition-all">
-        + Add Expression
-      </button>
-    </div>
 
-    <!-- 4. НИЖНЯ ЗОНА: ЗАПИС -->
-    <div id="bottom-bar" class="w-full flex flex-col items-center">
-      <div id="record-controls" class="flex flex-col items-center w-full max-w-xs">
+      <!-- ПІДКАЗКА РЕФЛЕКСІЇ (З'являється тільки після запису) -->
+      <div id="reflection-hint" class="hidden text-center text-[11px] font-mono uppercase tracking-widest text-neutral-400 mb-2">
+        Tap words you used
+      </div>
+
+      <!-- НИЖНЯ ЗОНА ДІЇ (ЗАПИС АБО ЗБЕРЕЖЕННЯ РЕФЛЕКСІЇ) -->
+      <div id="action-zone" class="w-full flex flex-col items-center">
         
-        <!-- Хвиля та зворотний відлік -->
-        <div id="visualizer-container" class="h-10 flex flex-col items-center justify-end mb-3 opacity-0 scale-95 pointer-events-none transition-all duration-300">
-          <div class="flex items-center gap-1.5 mb-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-            <span id="timer-display" class="text-[11px] font-mono text-neutral-400">00:00 / 01:00</span>
-          </div>
-          <div class="w-44 h-5 flex items-center justify-center">
-            <canvas id="voice-line-canvas" class="w-full h-full"></canvas>
-          </div>
+        <!-- Стан 1: Кнопка запису -->
+        <button id="mic-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-all shadow-md flex items-center justify-center">
+          <div id="stop-square" class="w-4 h-4 rounded-sm bg-white hidden"></div>
+        </button>
+
+        <!-- Стан 2: Елементи рефлексії на місці (Слухати + Завершити) -->
+        <div id="reflection-controls" class="hidden flex items-center gap-4">
+          <button id="btn-play-self" title="Listen" class="w-12 h-12 rounded-full border border-neutral-200 bg-white flex items-center justify-center active:scale-90 transition-transform">
+            <i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>
+          </button>
+          <button id="btn-done-reflection" class="px-7 py-3.5 rounded-full bg-neutral-950 text-white font-mono text-xs uppercase tracking-wider active:scale-95 transition-all shadow-sm">
+            Done →
+          </button>
         </div>
 
-        <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-neutral-950 active:scale-90 transition-all shadow-md"></button>
       </div>
-    </div>
 
-  </main>
+    </section>
 
-  <!-- ================= VIEW 2: DICTIONARY ================= -->
-  <section id="view-dictionary" class="hidden flex-1 overflow-y-auto px-6 py-2 max-w-md w-full mx-auto relative overscroll-y-contain">
-    <div id="pull-hint" class="text-center py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition-opacity">
-      ↓ Pull down to search
-    </div>
-    <div id="dict-list" class="space-y-2.5 pb-12 pt-1"></div>
-  </section>
+    <!-- ================= 2. БІБЛІОТЕКА: СЛОВНИК + АРХІВ + СТРІК (СВАЙП ВЛІВО) ================= -->
+    <section id="view-library" class="w-screen h-full flex flex-col px-7 pb-8 pt-3 relative flex-shrink-0 bg-[#FAFAFA]">
+      
+      <!-- Верхній рядок: повернення в практику -->
+      <div class="w-full flex justify-between items-center mb-4">
+        <button id="close-library-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-950 transition-colors py-1 flex items-center gap-1 active:scale-95">
+          <span class="text-[10px]">←</span>
+          <span>Practice</span>
+        </button>
 
-  <!-- ================= VIEW 3: RECORDINGS ARCHIVE ================= -->
-  <section id="view-recordings" class="hidden flex-1 overflow-y-auto px-6 py-2 max-w-md w-full mx-auto relative overscroll-y-contain">
-    <div class="py-2 mb-1 flex items-center justify-between">
-      <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Spoken Thoughts</span>
-      <span id="rec-count" class="text-[10px] font-mono text-neutral-400">0 notes</span>
-    </div>
-    <div id="recordings-list" class="space-y-2.5 pb-12"></div>
-  </section>
+        <!-- МІНІМАЛІСТИЧНИЙ СТРІК ТУТ, ДЕ ЙОМУ МІСЦЕ -->
+        <div class="flex items-center gap-1 text-[11px] font-mono text-neutral-500">
+          <span id="streak-icon">●</span>
+          <span id="streak-count">0</span>
+          <span class="text-[9px] text-neutral-400 uppercase tracking-wider">days streak</span>
+        </div>
+      </div>
 
-  <!-- ================= SPOTLIGHT SEARCH OVERLAY ================= -->
-  <div id="spotlight-overlay" class="fixed inset-0 bg-neutral-950/20 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-200">
-    <div id="spotlight-panel" class="w-full max-w-md mx-auto px-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 -translate-y-full">
-      <div class="bg-white rounded-2xl border border-neutral-200/80 shadow-2xl p-2.5 flex items-center gap-3">
-        <i data-lucide="search" class="w-4 h-4 text-neutral-400 ml-2 stroke-[1.5] flex-shrink-0"></i>
-        <input type="text" id="dict-search" placeholder="Search expressions..." autocomplete="off"
-               class="flex-1 text-sm text-neutral-950 placeholder-neutral-400 focus:outline-none p-0 m-0">
-        <button id="close-spotlight-btn" class="text-xs font-mono text-neutral-400 hover:text-neutral-900 px-2 py-1 flex-shrink-0">
-          Cancel
+      <!-- Вкладки Бібліотеки: Слова / Записи -->
+      <div class="flex items-center gap-4 border-b border-neutral-200/80 pb-2 mb-3">
+        <button id="subtab-words" class="text-xs font-mono uppercase tracking-wider font-medium text-neutral-950 transition-colors">
+          Words (<span id="words-count">0</span>)
+        </button>
+        <button id="subtab-audio" class="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-950 transition-colors">
+          Audio Notes (<span id="audio-count">0</span>)
         </button>
       </div>
-    </div>
+
+      <!-- Списки слів або аудіо -->
+      <div id="library-content" class="flex-1 overflow-y-auto overscroll-y-contain space-y-2 pb-12">
+        <!-- Контент слів або аудіо -->
+      </div>
+
+    </section>
+
   </div>
 
-  <!-- ================= ADD EXPRESSION MODAL ================= -->
+  <!-- ================= ADD MODAL ================= -->
   <div id="add-modal" class="fixed inset-0 bg-neutral-900/10 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-6 sm:p-7 border border-neutral-200/80 shadow-2xl relative">
-      <div class="flex justify-between items-center mb-6">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 border border-neutral-200/80 shadow-2xl relative">
+      <div class="flex justify-between items-center mb-5">
         <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-400">New Expression</span>
-        <button onclick="closeModal()" class="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-900 transition-colors">
+        <button onclick="closeModal()" class="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-900">
           <i data-lucide="x" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
       </div>
@@ -282,12 +225,11 @@
         </div>
 
         <div>
-          <textarea id="in-example" rows="2" placeholder="Example context or meaning (optional)" autocomplete="off"
+          <textarea id="in-example" rows="2" placeholder="Example sentence (optional)" autocomplete="off"
                     class="w-full bg-white px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-light text-neutral-700 placeholder-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors resize-none"></textarea>
         </div>
 
-        <div class="pt-2 flex items-center justify-between">
-          <span class="text-[10px] font-mono text-neutral-400">↵ Enter</span>
+        <div class="pt-2 flex items-center justify-end">
           <button type="submit" class="px-6 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-medium tracking-wide active:scale-95 transition-all">
             Save
           </button>
@@ -298,8 +240,8 @@
 
   <!-- ================= JS ENGINE ================= -->
   <script>
-    /* 1. DATABASE LAYER */
-    const DB_NAME = 'vocalize_v9_db';
+    /* 1. DATABASE */
+    const DB_NAME = 'vocalize_zen_v11';
     let db;
 
     function openDB() {
@@ -307,12 +249,8 @@
         const req = indexedDB.open(DB_NAME, 1);
         req.onupgradeneeded = (e) => {
           const d = e.target.result;
-          if (!d.objectStoreNames.contains('cards')) {
-            d.createObjectStore('cards', { keyPath: 'id', autoIncrement: true });
-          }
-          if (!d.objectStoreNames.contains('recordings')) {
-            d.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
-          }
+          if (!d.objectStoreNames.contains('cards')) d.createObjectStore('cards', { keyPath: 'id', autoIncrement: true });
+          if (!d.objectStoreNames.contains('recordings')) d.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
         };
         req.onsuccess = () => { db = req.result; resolve(); };
       });
@@ -371,139 +309,79 @@
       if (cards.length === 0) {
         const defaults = [
           { phrase: "figure out", example: "I need some time to figure this out.", nextDue: 0, reps: 0 },
-          { phrase: "cut corners", example: "Never cut corners on product safety.", nextDue: 0, reps: 0 },
+          { phrase: "cut corners", example: "Never cut corners on product quality.", nextDue: 0, reps: 0 },
           { phrase: "come up with", example: "We have to come up with a better solution.", nextDue: 0, reps: 0 },
           { phrase: "call it a day", example: "Let's finish this task and call it a day.", nextDue: 0, reps: 0 },
-          { phrase: "look into", example: "I will look into this issue tomorrow.", nextDue: 0, reps: 0 },
           { phrase: "on the same page", example: "Let's make sure everyone is on the same page.", nextDue: 0, reps: 0 }
         ];
         for (let d of defaults) await saveCard(d);
       }
     }
 
-    /* 2. STREAK ENGINE & APP BADGING (PWA) */
+    /* 2. HAPTICS (ТАКТИЛЬНИЙ ВІДГУК) */
+    function haptic(ms = 12) {
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate(ms); } catch (e) {}
+      }
+    }
+
+    /* 3. STREAK & APP BADGING (PWA) */
     function getLocalDateStr(d = new Date()) {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    function calcStreakAndChain(historyList, todayStr) {
-      const history = new Set(historyList);
-      const today = new Date(todayStr);
-      
-      const days = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dStr = getLocalDateStr(d);
-        days.push({
-          date: dStr,
-          is_today: (i === 0),
-          completed: history.has(dStr)
-        });
-      }
-
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = getLocalDateStr(yesterday);
-
-      let streak = 0;
-      if (history.has(todayStr)) {
-        let cur = new Date(today);
-        while (history.has(getLocalDateStr(cur))) {
-          streak++;
-          cur.setDate(cur.getDate() - 1);
-        }
-      } else if (history.has(yesterdayStr)) {
-        let cur = new Date(yesterday);
-        while (history.has(getLocalDateStr(cur))) {
-          streak++;
-          cur.setDate(cur.getDate() - 1);
-        }
-      } else {
-        streak = 0;
-      }
-
-      return { days, streak };
-    }
-
-    function updatePwaBadge(isDoneToday) {
-      if ('setAppBadge' in navigator) {
-        if (!isDoneToday) {
-          navigator.setAppBadge(1).catch(() => {});
-        } else {
-          navigator.clearAppBadge().catch(() => {});
-        }
-      }
-    }
-
-    function renderStreak() {
+    function updateStreakDisplay() {
       const history = JSON.parse(localStorage.getItem('vocalize_streak_history') || '[]');
       const todayStr = getLocalDateStr();
-      const { days, streak } = calcStreakAndChain(history, todayStr);
-      const isDoneToday = history.includes(todayStr);
+      const yesterdayStr = getLocalDateStr(new Date(Date.now() - 86400000));
 
-      const container = document.getElementById('streak-timeline');
-      const countEl = document.getElementById('streak-count');
-      countEl.textContent = streak;
-
-      let html = '';
-      for (let i = 0; i < days.length; i++) {
-        const d = days[i];
-        
-        // Крапка дня
-        if (d.completed) {
-          html += `<span class="w-1.5 h-1.5 rounded-full bg-neutral-950 transition-colors" title="${d.date}"></span>`;
-        } else if (d.is_today) {
-          html += `<span class="w-1.5 h-1.5 rounded-full border border-neutral-400 animate-pulse" title="Today (pending)"></span>`;
-        } else {
-          html += `<span class="w-1.5 h-1.5 rounded-full bg-neutral-200 transition-colors" title="${d.date}"></span>`;
-        }
-
-        // Полоска зв'язку з наступним днем
-        if (i < days.length - 1) {
-          const next = days[i + 1];
-          const isConnected = d.completed && next.completed;
-          html += `<span class="w-2.5 h-[1.2px] ${isConnected ? 'bg-neutral-950' : 'bg-neutral-200/80'} transition-colors"></span>`;
-        }
+      let streak = 0;
+      let cur = new Date();
+      if (!history.includes(todayStr) && history.includes(yesterdayStr)) {
+        cur = new Date(Date.now() - 86400000);
       }
 
-      container.innerHTML = html;
-      updatePwaBadge(isDoneToday);
+      while (history.includes(getLocalDateStr(cur))) {
+        streak++;
+        cur.setDate(cur.getDate() - 1);
+      }
+
+      document.getElementById('streak-count').textContent = streak;
+      
+      // Бейдж на іконку PWA (якщо сьогодні ще не займався — бейдж 1)
+      if ('setAppBadge' in navigator) {
+        if (!history.includes(todayStr)) navigator.setAppBadge(1).catch(() => {});
+        else navigator.clearAppBadge().catch(() => {});
+      }
     }
 
-    function markDayCompleted() {
+    function markStreakToday() {
       const history = JSON.parse(localStorage.getItem('vocalize_streak_history') || '[]');
       const todayStr = getLocalDateStr();
       if (!history.includes(todayStr)) {
         history.push(todayStr);
         localStorage.setItem('vocalize_streak_history', JSON.stringify(history));
       }
-      renderStreak();
+      updateStreakDisplay();
     }
 
-    /* 3. SCENARIOS POOL */
+    /* 4. SCENARIOS */
     const PROMPTS = [
       "What is something in your industry or daily routine that people overcomplicate?",
-      "Describe a project or work situation that went sideways and how you reacted.",
-      "How would you handle a colleague who constantly misses deadlines without excuses?",
-      "Talk about a tough decision you made recently where there was no perfect choice.",
-      "Describe a time you took a calculated risk: what was at stake and what happened?",
-      "How do you usually explain a complex technical problem to a non-technical person?",
-      "Talk about a habit or commitment you had to drop recently to protect your energy.",
-      "Describe a situation where a quick shortcut ended up causing a much bigger problem."
+      "Describe a situation that went sideways and how you reacted.",
+      "How would you handle a colleague who constantly misses deadlines?",
+      "Talk about a tough decision you made where there was no perfect choice.",
+      "Describe a time you took a calculated risk: what was at stake?",
+      "How do you explain a complex technical problem to a beginner?",
+      "Describe a situation where a shortcut caused a much bigger problem."
     ];
 
-    /* 4. APP STATE */
+    /* 5. APP STATE */
     let currentTriad = [];
     let currentPrompt = "";
     let isRecording = false;
+    let isReflectionMode = false;
     let mediaRecorder = null;
-    let audioContext = null;
-    let analyser = null;
-    let animFrameId = null;
     let recordedChunks = [];
     let lastAudioBlob = null;
     let lastAudioUrl = null;
@@ -512,363 +390,210 @@
     let chimePlayed = false;
     let wakeLock = null;
     let usedWordsMap = {};
+    let activePlayerAudio = null;
 
-    function getRandomPrompt() {
-      return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
-    }
-
+    /* 6. PRACTICE INITIALIZATION */
     async function initPracticeSession() {
       const all = await getCards();
-      const emptyState = document.getElementById('empty-state');
-      const promptCard = document.getElementById('practice-prompt-card');
-      const reflectionCard = document.getElementById('practice-reflection-card');
-      const scenarioHeader = document.getElementById('scenario-header');
-      const bottomBar = document.getElementById('bottom-bar');
-
-      if (all.length < 3) {
-        emptyState.classList.remove('hidden');
-        promptCard.classList.add('hidden');
-        reflectionCard.classList.add('hidden');
-        scenarioHeader.classList.add('hidden');
-        bottomBar.classList.add('hidden');
-        return;
-      }
-
-      emptyState.classList.add('hidden');
-      promptCard.classList.remove('hidden');
-      reflectionCard.classList.add('hidden');
-      scenarioHeader.classList.remove('hidden');
-      bottomBar.classList.remove('hidden');
+      if (all.length < 3) return;
 
       const sorted = [...all].sort((a, b) => (a.nextDue || 0) - (b.nextDue || 0));
       currentTriad = sorted.slice(0, 3);
-      currentPrompt = getRandomPrompt();
+      currentPrompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
 
       document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
 
-      // Генерація 3 слів з ідеальним ритмом і простором
-      const container = document.getElementById('target-words-container');
+      // 3 ЧИСТІ СЛОВА В СТОВПЧИК (ПРИКЛАД ВІДКРИВАЄТЬСЯ ПО ТАПУ)
+      const container = document.getElementById('words-container');
       container.innerHTML = '';
-      currentTriad.forEach(card => {
-        const item = document.createElement('div');
-        item.className = "flex flex-col items-center text-center";
-        item.innerHTML = `
-          <h2 class="practice-word-phrase text-3xl sm:text-4xl font-light text-neutral-950 tracking-tight leading-none transition-colors">
+      usedWordsMap = {};
+
+      currentTriad.forEach((card, index) => {
+        usedWordsMap[card.id] = false;
+
+        const row = document.createElement('div');
+        row.className = "word-row flex flex-col items-center text-center select-none";
+        row.dataset.id = card.id;
+
+        row.innerHTML = `
+          <h2 class="word-text text-3xl sm:text-4xl font-light text-neutral-950 tracking-tight leading-tight transition-colors">
             ${card.phrase}
           </h2>
-          ${card.example ? `<p class="practice-word-example text-xs text-neutral-400 font-light mt-2 leading-relaxed max-w-[260px] transition-colors">${card.example}</p>` : ''}
+          ${card.example ? `<p class="word-hint text-xs text-neutral-400 font-light leading-relaxed max-w-[280px]">“${card.example}”</p>` : ''}
         `;
-        container.appendChild(item);
+
+        // У звичайному стані тап відкриває/ховає приклад
+        row.addEventListener('click', () => {
+          if (isReflectionMode) {
+            // У стані рефлексії тап відмічає слово
+            haptic(8);
+            usedWordsMap[card.id] = !usedWordsMap[card.id];
+            row.classList.toggle('is-selected', usedWordsMap[card.id]);
+          } else if (!isRecording) {
+            // У спокої тап розгортає приклад
+            const hint = row.querySelector('.word-hint');
+            if (hint) hint.classList.toggle('is-open');
+          }
+        });
+
+        container.appendChild(row);
       });
 
-      resetMicState();
+      exitReflectionMode();
     }
 
     document.getElementById('btn-refresh-prompt').addEventListener('click', () => {
       if (isRecording) return;
-      currentPrompt = getRandomPrompt();
+      currentPrompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
       document.getElementById('prompt-question').textContent = `“${currentPrompt}”`;
     });
 
-    /* 5. OLED THEME & SCREEN WAKE LOCK */
-    const metaThemeColor = document.getElementById('meta-theme-color');
-
-    function enableOledMode() {
-      document.documentElement.classList.add('oled-mode');
-      document.body.classList.add('oled-mode');
-      if (metaThemeColor) metaThemeColor.setAttribute('content', '#000000');
-    }
-
-    function disableOledMode() {
-      document.documentElement.classList.remove('oled-mode');
-      document.body.classList.remove('oled-mode');
-      if (metaThemeColor) metaThemeColor.setAttribute('content', '#FAFAFA');
-    }
-
+    /* 7. WAKE LOCK & 45s CHIME */
     async function requestWakeLock() {
       try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await navigator.wakeLock.request('screen');
-          wakeLock.addEventListener('release', () => { wakeLock = null; });
-        }
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
       } catch (err) {}
     }
 
-    async function releaseWakeLock() {
-      if (wakeLock !== null) {
-        try { await wakeLock.release(); } catch (err) {}
-        wakeLock = null;
-      }
+    function releaseWakeLock() {
+      if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     }
 
-    document.addEventListener('visibilitychange', async () => {
-      if (wakeLock !== null && document.visibilityState === 'visible' && isRecording) {
-        await requestWakeLock();
-      }
-    });
-
-    /* 6. SOUND CHIME AT 45s */
     function play45sChime() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
         osc.type = 'sine';
         osc.frequency.setValueAtTime(587.33, now);
         osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
-
         gain.gain.setValueAtTime(0.001, now);
         gain.gain.linearRampToValueAtTime(0.18, now + 0.04);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-
         osc.connect(gain);
         gain.connect(ctx.destination);
-
         osc.start(now);
         osc.stop(now + 0.45);
       } catch (e) {}
     }
 
-    /* 7. VOICE BARS VISUALIZER */
-    const lineCanvas = document.getElementById('voice-line-canvas');
-    const ctx = lineCanvas.getContext('2d');
-    const BAR_COUNT = 18;
-    const smoothHeights = new Array(BAR_COUNT).fill(2.5);
-
-    function resizeCanvas() {
-      const rect = lineCanvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      lineCanvas.width = rect.width * dpr;
-      lineCanvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
-      if (!isRecording) clearCanvas();
-    }
-    window.addEventListener('resize', resizeCanvas);
-
-    function clearCanvas() {
-      const width = lineCanvas.width / (window.devicePixelRatio || 1);
-      const height = lineCanvas.height / (window.devicePixelRatio || 1);
-      ctx.clearRect(0, 0, width, height);
-    }
-
-    function renderAudioBars() {
-      if (!isRecording) return;
-      animFrameId = requestAnimationFrame(renderAudioBars);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyser.getByteFrequencyData(dataArray);
-
-      const width = lineCanvas.width / (window.devicePixelRatio || 1);
-      const height = lineCanvas.height / (window.devicePixelRatio || 1);
-      const centerY = height / 2;
-
-      ctx.clearRect(0, 0, width, height);
-
-      const barWidth = 2.5;
-      const barGap = 4;
-      const totalWidth = BAR_COUNT * barWidth + (BAR_COUNT - 1) * barGap;
-      const startX = (width - totalWidth) / 2;
-      const maxHeight = height * 0.9;
-
-      ctx.fillStyle = isRecording ? '#FFFFFF' : '#171717';
-
-      for (let i = 0; i < BAR_COUNT; i++) {
-        const binIndex = Math.min(Math.floor((i + 1) * 1.5), bufferLength - 1);
-        const amplitude = dataArray[binIndex] / 255.0;
-        const targetH = Math.max(2.5, amplitude * maxHeight);
-        smoothHeights[i] += (targetH - smoothHeights[i]) * 0.28;
-
-        const currentH = smoothHeights[i];
-        const x = startX + i * (barWidth + barGap);
-        const y = centerY - currentH / 2;
-
-        ctx.beginPath();
-        if (ctx.roundRect) {
-          ctx.roundRect(x, y, barWidth, currentH, barWidth / 2);
-        } else {
-          ctx.rect(x, y, barWidth, currentH);
-        }
-        ctx.fill();
-      }
-    }
-
-    function resetMicState() {
-      isRecording = false;
-      const visualizer = document.getElementById('visualizer-container');
-      if (visualizer) {
-        visualizer.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-        visualizer.classList.remove('opacity-100', 'scale-100');
-      }
-      document.getElementById('timer-display').textContent = '00:00 / 01:00';
-      clearInterval(timerInterval);
-      cancelAnimationFrame(animFrameId);
-      clearCanvas();
-      releaseWakeLock();
-      disableOledMode();
-    }
-
-    /* 8. RECORDING (1-MIN LIMIT & AUTO-STOP) */
-    const micBtn = document.getElementById('mic-toggle-btn');
-    const visualizer = document.getElementById('visualizer-container');
-    const timerDisplay = document.getElementById('timer-display');
+    /* 8. RECORDING ENGINE */
+    const micBtn = document.getElementById('mic-btn');
+    const metaThemeColor = document.getElementById('meta-theme-color');
 
     micBtn.addEventListener('click', async () => {
       if (!isRecording) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          analyser = audioContext.createAnalyser();
-          analyser.fftSize = 128;
-          analyser.smoothingTimeConstant = 0.75;
-          const source = audioContext.createMediaStreamSource(stream);
-          source.connect(analyser);
-
           mediaRecorder = new MediaRecorder(stream);
           recordedChunks = [];
           chimePlayed = false;
 
           mediaRecorder.ondataavailable = e => e.data.size > 0 && recordedChunks.push(e.data);
-          
           mediaRecorder.onstop = () => {
             lastAudioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
             lastAudioUrl = URL.createObjectURL(lastAudioBlob);
-
             stream.getTracks().forEach(t => t.stop());
-            if (audioContext && audioContext.state !== 'closed') audioContext.close();
-
-            disableOledMode();
-            openReflectionView();
+            enterReflectionMode();
           };
 
           mediaRecorder.start();
           isRecording = true;
+          haptic(20);
 
-          enableOledMode();
+          // ДЗЕН-РЕЖИМ OLED
+          document.body.classList.add('is-recording');
+          metaThemeColor.setAttribute('content', '#000000');
           await requestWakeLock();
-
-          visualizer.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
-          visualizer.classList.add('opacity-100', 'scale-100');
-
-          renderAudioBars();
 
           startTime = Date.now();
           timerInterval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const seconds = Math.min(60, elapsed);
-            timerDisplay.textContent = `00:${String(seconds).padStart(2, '0')} / 01:00`;
-
-            if (seconds >= 45 && !chimePlayed) {
+            if (elapsed >= 45 && !chimePlayed) {
               play45sChime();
               chimePlayed = true;
             }
-
             if (elapsed >= 60) {
-              stopRecordingSession();
+              stopRecording();
             }
-          }, 350);
+          }, 500);
 
         } catch (e) {
           alert('Microphone access is required.');
-          disableOledMode();
+          document.body.classList.remove('is-recording');
         }
       } else {
-        stopRecordingSession();
+        stopRecording();
       }
     });
 
-    function stopRecordingSession() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      resetMicState();
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      isRecording = false;
+      clearInterval(timerInterval);
+      releaseWakeLock();
+      haptic(15);
+      document.body.classList.remove('is-recording');
+      metaThemeColor.setAttribute('content', '#FAFAFA');
     }
 
-    /* 9. REFLECTION & SAVE */
-    let reflectionAudio = null;
+    /* 9. IN-PLACE REFLECTION (РЕФЛЕКСІЯ ПРЯМО ТУТ) */
+    function enterReflectionMode() {
+      isReflectionMode = true;
 
-    function openReflectionView() {
-      document.getElementById('scenario-header').classList.add('hidden');
-      document.getElementById('practice-prompt-card').classList.add('hidden');
-      document.getElementById('bottom-bar').classList.add('hidden');
+      // Ховаємо кнопку запису, показуємо контролери рефлексії
+      micBtn.classList.add('hidden');
+      document.getElementById('reflection-controls').classList.remove('hidden');
+      document.getElementById('reflection-controls').classList.add('flex');
+      document.getElementById('reflection-hint').classList.remove('hidden');
 
-      const reflectionCard = document.getElementById('practice-reflection-card');
-      reflectionCard.classList.remove('hidden');
+      // Слова отримують статус інтерактивних
+      document.querySelectorAll('.word-row').forEach(row => {
+        row.classList.add('is-reflection');
+      });
 
-      const durationSec = Math.max(1, Math.min(60, Math.floor((Date.now() - startTime) / 1000)));
-      document.getElementById('reflection-audio-duration').textContent = `00:${String(durationSec).padStart(2, '0')}`;
-
-      if (reflectionAudio) reflectionAudio.pause();
-      reflectionAudio = new Audio(lastAudioUrl);
-      const playBtn = document.getElementById('btn-reflection-play');
-      playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white"></i>`;
+      // Скидання плеєра
+      if (activePlayerAudio) activePlayerAudio.pause();
+      activePlayerAudio = new Audio(lastAudioUrl);
+      const playBtn = document.getElementById('btn-play-self');
+      playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>`;
       lucide.createIcons();
 
       playBtn.onclick = () => {
-        if (reflectionAudio.paused) {
-          reflectionAudio.play();
-          playBtn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5 fill-white"></i>`;
-          reflectionAudio.onended = () => {
-            playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white"></i>`;
+        if (activePlayerAudio.paused) {
+          activePlayerAudio.play();
+          playBtn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5 fill-neutral-950 text-neutral-950"></i>`;
+          activePlayerAudio.onended = () => {
+            playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>`;
             lucide.createIcons();
           };
         } else {
-          reflectionAudio.pause();
-          playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-white"></i>`;
+          activePlayerAudio.pause();
+          playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-neutral-950 text-neutral-950"></i>`;
         }
         lucide.createIcons();
       };
-
-      usedWordsMap = {};
-      const chipsContainer = document.getElementById('reflection-chips-container');
-      chipsContainer.innerHTML = '';
-
-      currentTriad.forEach(card => {
-        usedWordsMap[card.id] = false;
-
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = "w-full py-3 px-4 rounded-2xl border border-neutral-200/80 bg-white flex items-center justify-between text-left transition-all active:scale-98 select-none";
-        
-        chip.innerHTML = `
-          <div class="text-sm font-medium text-neutral-800">${card.phrase}</div>
-          <div class="w-5 h-5 rounded-full border border-neutral-300 flex items-center justify-center transition-colors check-circle">
-            <i data-lucide="check" class="w-3 h-3 text-white hidden"></i>
-          </div>
-        `;
-
-        chip.addEventListener('click', () => {
-          usedWordsMap[card.id] = !usedWordsMap[card.id];
-          const isUsed = usedWordsMap[card.id];
-          const circle = chip.querySelector('.check-circle');
-          const checkIcon = chip.querySelector('[data-lucide="check"]');
-
-          if (isUsed) {
-            chip.classList.add('border-neutral-950', 'bg-neutral-50/50');
-            circle.classList.add('bg-neutral-950', 'border-neutral-950');
-            checkIcon.classList.remove('hidden');
-          } else {
-            chip.classList.remove('border-neutral-950', 'bg-neutral-50/50');
-            circle.classList.remove('bg-neutral-950', 'border-neutral-950');
-            checkIcon.classList.add('hidden');
-          }
-          lucide.createIcons();
-        });
-
-        chipsContainer.appendChild(chip);
-      });
-
-      lucide.createIcons();
     }
 
-    document.getElementById('btn-save-reflection').addEventListener('click', async () => {
-      if (reflectionAudio) reflectionAudio.pause();
+    function exitReflectionMode() {
+      isReflectionMode = false;
+      micBtn.classList.remove('hidden');
+      document.getElementById('reflection-controls').classList.add('hidden');
+      document.getElementById('reflection-controls').classList.remove('flex');
+      document.getElementById('reflection-hint').classList.add('hidden');
+      document.querySelectorAll('.word-row').forEach(row => {
+        row.classList.remove('is-reflection', 'is-selected');
+      });
+    }
+
+    document.getElementById('btn-done-reflection').addEventListener('click', async () => {
+      haptic([10, 40, 15]);
+      if (activePlayerAudio) activePlayerAudio.pause();
 
       const durationSec = Math.max(1, Math.min(60, Math.floor((Date.now() - startTime) / 1000)));
 
+      // Оновлюємо інтервали слів
       for (let card of currentTriad) {
         const wasUsed = usedWordsMap[card.id];
         if (wasUsed) {
@@ -881,6 +606,7 @@
         await saveCard(card);
       }
 
+      // Зберігаємо в аудіо-нотатки
       await saveRecording({
         prompt: currentPrompt,
         triadPhrases: currentTriad.map(c => ({ phrase: c.phrase, used: usedWordsMap[c.id] })),
@@ -889,327 +615,145 @@
         duration: durationSec
       });
 
-      // Фіксуємо виконання практики для стріку та бейджика
-      markDayCompleted();
-
+      markStreakToday();
       await initPracticeSession();
     });
 
-    /* 10. NAVIGATION */
-    const tabPracticeBtn = document.getElementById('tab-practice-btn');
-    const tabDictBtn = document.getElementById('tab-dictionary-btn');
-    const tabRecordingsBtn = document.getElementById('tab-recordings-btn');
+    /* 10. SWIPE GESTURES & LIBRARY TRANSITION */
+    const viewSlider = document.getElementById('view-slider');
+    let currentTab = 'practice'; // 'practice' or 'library'
 
-    const viewPractice = document.getElementById('view-practice');
-    const viewDictionary = document.getElementById('view-dictionary');
-    const viewRecordings = document.getElementById('view-recordings');
-
-    const tabActiveStyle = "p-2 text-neutral-950 transition-colors active:scale-90 flex items-center justify-center";
-    const tabInactiveStyle = "p-2 text-neutral-300 hover:text-neutral-950 transition-colors active:scale-90 flex items-center justify-center";
-
-    function switchTab(tab) {
-      tabPracticeBtn.className = tabInactiveStyle;
-      tabDictBtn.className = tabInactiveStyle;
-      tabRecordingsBtn.className = tabInactiveStyle;
-
-      viewPractice.classList.add('hidden');
-      viewDictionary.classList.add('hidden');
-      viewRecordings.classList.add('hidden');
-
-      if (tab === 'practice') {
-        viewPractice.classList.remove('hidden');
-        tabPracticeBtn.className = tabActiveStyle;
-        setTimeout(resizeCanvas, 50);
-      } else if (tab === 'dictionary') {
-        viewDictionary.classList.remove('hidden');
-        tabDictBtn.className = tabActiveStyle;
-        renderDictionary();
-      } else if (tab === 'recordings') {
-        viewRecordings.classList.remove('hidden');
-        tabRecordingsBtn.className = tabActiveStyle;
-        renderRecordings();
-      }
+    function goToLibrary() {
+      currentTab = 'library';
+      viewSlider.style.transform = 'translateX(-100vw)';
+      renderLibrary();
     }
 
-    tabPracticeBtn.addEventListener('click', () => switchTab('practice'));
-    tabDictBtn.addEventListener('click', () => switchTab('dictionary'));
-    tabRecordingsBtn.addEventListener('click', () => switchTab('recordings'));
+    function goToPractice() {
+      currentTab = 'practice';
+      viewSlider.style.transform = 'translateX(0vw)';
+    }
 
-    /* 11. RECORDINGS ARCHIVE (SOLID SQUARE) */
-    const recordingsList = document.getElementById('recordings-list');
-    let activePlayerAudio = null;
-    let activePlayId = null;
+    document.getElementById('open-library-btn').addEventListener('click', goToLibrary);
+    document.getElementById('close-library-btn').addEventListener('click', goToPractice);
 
-    async function renderRecordings() {
-      const list = await getRecordings();
-      document.getElementById('rec-count').textContent = `${list.length} thoughts`;
-      recordingsList.innerHTML = '';
+    // Свайп жести
+    let touchStartX = 0;
+    let touchStartY = 0;
 
-      if (list.length === 0) {
-        recordingsList.innerHTML = `<div class="py-16 text-center text-xs font-mono text-neutral-400">No spoken thoughts yet</div>`;
-        return;
+    window.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (isRecording) return;
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      const diffY = e.changedTouches[0].clientY - touchStartY;
+
+      // Горизонтальний свайп (без випадкового скролу)
+      if (Math.abs(diffX) > 60 && Math.abs(diffY) < 50) {
+        if (diffX < 0 && currentTab === 'practice') {
+          goToLibrary(); // Свайп вліво -> Бібліотека
+        } else if (diffX > 0 && currentTab === 'library') {
+          goToPractice(); // Свайп вправо -> Практика
+        }
       }
+    });
 
-      list.forEach(rec => {
-        const item = document.createElement('div');
-        item.className = "bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-sm select-none";
-        
-        const dateStr = formatRecDate(rec.date);
-        const isPlayingThis = activePlayId === rec.id;
+    /* 11. LIBRARY ENGINE (WORDS + AUDIO NOTES) */
+    let libraryTab = 'words'; // 'words' or 'audio'
 
-        const chipsHtml = (rec.triadPhrases || []).map(p => `
-          <span class="text-[9px] font-mono px-2 py-0.5 rounded-md ${p.used ? 'bg-neutral-950 text-white' : 'border border-neutral-200 text-neutral-400'}">
-            ${p.phrase} ${p.used ? '✓' : ''}
-          </span>
-        `).join('');
+    const subtabWords = document.getElementById('subtab-words');
+    const subtabAudio = document.getElementById('subtab-audio');
+    const libraryContent = document.getElementById('library-content');
 
-        item.innerHTML = `
-          <div class="flex items-start justify-between gap-3 mb-2.5">
-            <h4 class="text-xs font-medium text-neutral-950 leading-snug flex-1">${rec.prompt || 'Spoken Reflection'}</h4>
-            <div class="flex items-center gap-1.5 flex-shrink-0">
-              <button class="play-rec-btn w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center active:scale-90 transition-transform" data-id="${rec.id}">
-                <i data-lucide="${isPlayingThis ? 'square' : 'play'}" class="w-3.5 h-3.5 fill-white"></i>
-              </button>
-              <button class="del-rec-btn p-1.5 text-neutral-300 hover:text-red-500 active:scale-90 transition-colors" data-id="${rec.id}">
-                <i data-lucide="trash-2" class="w-4 h-4 stroke-[1.5]"></i>
-              </button>
+    subtabWords.addEventListener('click', () => {
+      libraryTab = 'words';
+      subtabWords.className = "text-xs font-mono uppercase tracking-wider font-medium text-neutral-950 transition-colors";
+      subtabAudio.className = "text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-950 transition-colors";
+      renderLibrary();
+    });
+
+    subtabAudio.addEventListener('click', () => {
+      libraryTab = 'audio';
+      subtabAudio.className = "text-xs font-mono uppercase tracking-wider font-medium text-neutral-950 transition-colors";
+      subtabWords.className = "text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-950 transition-colors";
+      renderLibrary();
+    });
+
+    async function renderLibrary() {
+      const allCards = await getCards();
+      const allRecs = await getRecordings();
+
+      document.getElementById('words-count').textContent = allCards.length;
+      document.getElementById('audio-count').textContent = allRecs.length;
+      libraryContent.innerHTML = '';
+
+      if (libraryTab === 'words') {
+        if (allCards.length === 0) {
+          libraryContent.innerHTML = `<div class="py-16 text-center text-xs font-mono text-neutral-400">Dictionary is empty</div>`;
+          return;
+        }
+
+        allCards.forEach(card => {
+          const item = document.createElement('div');
+          item.className = "bg-white border border-neutral-200/80 rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm";
+          item.innerHTML = `
+            <div class="flex-1 min-w-0 pr-3">
+              <div class="text-sm font-medium text-neutral-950 truncate">${card.phrase}</div>
+              ${card.example ? `<div class="text-xs text-neutral-400 font-light truncate mt-0.5">${card.example}</div>` : ''}
             </div>
-          </div>
+            <button class="del-card-btn p-2 text-neutral-300 hover:text-red-500 transition-colors" data-id="${card.id}">
+              <i data-lucide="trash-2" class="w-4 h-4 stroke-[1.5]"></i>
+            </button>
+          `;
+          libraryContent.appendChild(item);
 
-          <div class="flex flex-wrap gap-1.5 mb-2.5">
-            ${chipsHtml}
-          </div>
-
-          <div class="flex items-center justify-between text-[10px] font-mono text-neutral-400 pt-1 border-t border-neutral-100">
-            <span>${dateStr}</span>
-            <span>${rec.duration}s</span>
-          </div>
-        `;
-
-        recordingsList.appendChild(item);
-
-        item.querySelector('.play-rec-btn').addEventListener('click', () => {
-          if (activePlayId === rec.id) {
-            if (activePlayerAudio) activePlayerAudio.pause();
-            activePlayId = null;
-            renderRecordings();
-          } else {
-            if (activePlayerAudio) activePlayerAudio.pause();
-            const url = URL.createObjectURL(rec.blob);
-            activePlayerAudio = new Audio(url);
-            activePlayId = rec.id;
-            activePlayerAudio.play();
-            activePlayerAudio.onended = () => {
-              activePlayId = null;
-              renderRecordings();
-            };
-            renderRecordings();
-          }
-        });
-
-        item.querySelector('.del-rec-btn').addEventListener('click', async () => {
-          if (activePlayId === rec.id && activePlayerAudio) {
-            activePlayerAudio.pause();
-            activePlayId = null;
-          }
-          await deleteRecording(rec.id);
-          renderRecordings();
-        });
-      });
-
-      lucide.createIcons();
-    }
-
-    function formatRecDate(ts) {
-      const d = new Date(ts);
-      const now = new Date();
-      const isToday = d.toDateString() === now.toDateString();
-      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return isToday ? `Today, ${time}` : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
-    }
-
-    /* 12. DICTIONARY & CLEAN SWIPE-TO-DELETE */
-    const dictList = document.getElementById('dict-list');
-    let currentlySwipedRow = null;
-
-    async function renderDictionary(filter = '') {
-      const all = await getCards();
-      const filtered = all.filter(c => 
-        c.phrase.toLowerCase().includes(filter.toLowerCase()) || 
-        (c.example && c.example.toLowerCase().includes(filter.toLowerCase()))
-      );
-
-      dictList.innerHTML = '';
-
-      if (filtered.length === 0) {
-        dictList.innerHTML = `<div class="py-12 text-center text-xs font-mono text-neutral-400">No expressions found</div>`;
-        return;
-      }
-
-      filtered.forEach(card => {
-        const itemWrapper = document.createElement('div');
-        itemWrapper.className = "relative overflow-hidden rounded-2xl select-none";
-        
-        itemWrapper.innerHTML = `
-          <div class="absolute inset-y-0 right-0 w-[64px] flex items-center justify-center text-red-500 active:opacity-70 transition-opacity" data-delete-id="${card.id}">
-            <i data-lucide="trash-2" class="w-5 h-5 text-red-500 stroke-[1.75]"></i>
-          </div>
-
-          <div class="swipe-content relative bg-white border border-neutral-200/80 rounded-2xl px-4 py-3.5 flex items-center justify-between z-10">
-            <div class="flex-1 min-w-0 pr-3 pointer-events-none">
-              <div class="flex items-center gap-2">
-                <h4 class="text-sm font-medium text-neutral-950 truncate">${card.phrase}</h4>
-                <span class="text-[9px] font-mono text-neutral-400 border border-neutral-200/80 rounded px-1.5 py-0.2">
-                  ${card.reps || 0} reps
-                </span>
-              </div>
-              ${card.example ? `<p class="text-xs text-neutral-500 font-light truncate mt-0.5">${card.example}</p>` : ''}
-            </div>
-          </div>
-        `;
-
-        dictList.appendChild(itemWrapper);
-        initSwipeGesture(itemWrapper.querySelector('.swipe-content'), itemWrapper.querySelector('[data-delete-id]'), card.id);
-      });
-
-      lucide.createIcons();
-    }
-
-    function initSwipeGesture(cardContent, deleteBtn, cardId) {
-      let startX = 0;
-      let isSwiping = false;
-      const threshold = 64;
-
-      function setTransform(x, transition = false) {
-        cardContent.style.transition = transition ? 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
-        cardContent.style.transform = `translateX(${x}px)`;
-      }
-
-      cardContent.addEventListener('touchstart', (e) => {
-        if (currentlySwipedRow && currentlySwipedRow !== cardContent) {
-          currentlySwipedRow.style.transform = 'translateX(0px)';
-          currentlySwipedRow = null;
-        }
-        startX = e.touches[0].clientX;
-        isSwiping = true;
-      }, { passive: true });
-
-      cardContent.addEventListener('touchmove', (e) => {
-        if (!isSwiping) return;
-        let diff = e.touches[0].clientX - startX;
-        if (diff < 0) {
-          if (diff < -threshold) diff = -threshold + (diff + threshold) * 0.2;
-          setTransform(diff, false);
-        } else {
-          setTransform(0, false);
-        }
-      }, { passive: true });
-
-      cardContent.addEventListener('touchend', (e) => {
-        if (!isSwiping) return;
-        isSwiping = false;
-        const diff = e.changedTouches[0].clientX - startX;
-
-        if (diff < -threshold / 2) {
-          setTransform(-threshold, true);
-          currentlySwipedRow = cardContent;
-        } else {
-          setTransform(0, true);
-          if (currentlySwipedRow === cardContent) currentlySwipedRow = null;
-        }
-      });
-
-      deleteBtn.addEventListener('click', async () => {
-        const wrapper = cardContent.parentElement;
-        wrapper.style.transition = 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
-        wrapper.style.maxHeight = wrapper.offsetHeight + 'px';
-        wrapper.style.opacity = '0';
-        wrapper.style.transform = 'scale(0.95)';
-
-        setTimeout(async () => {
-          wrapper.style.maxHeight = '0px';
-          wrapper.style.margin = '0px';
-          wrapper.style.padding = '0px';
-
-          setTimeout(async () => {
-            await deleteCard(cardId);
-            await renderDictionary(document.getElementById('dict-search').value);
+          item.querySelector('.del-card-btn').addEventListener('click', async () => {
+            await deleteCard(card.id);
+            await renderLibrary();
             await initPracticeSession();
-          }, 180);
-        }, 120);
-      });
-    }
-
-    document.addEventListener('touchstart', (e) => {
-      if (currentlySwipedRow && !currentlySwipedRow.contains(e.target) && !e.target.closest('[data-delete-id]')) {
-        currentlySwipedRow.style.transform = 'translateX(0px)';
-        currentlySwipedRow = null;
-      }
-    });
-
-    /* 13. SPOTLIGHT SEARCH */
-    const spotlightOverlay = document.getElementById('spotlight-overlay');
-    const spotlightPanel = document.getElementById('spotlight-panel');
-    const dictSearch = document.getElementById('dict-search');
-    const closeSpotlightBtn = document.getElementById('close-spotlight-btn');
-
-    function openSpotlight() {
-      spotlightOverlay.classList.remove('hidden');
-      setTimeout(() => {
-        spotlightOverlay.classList.remove('opacity-0');
-        spotlightPanel.classList.remove('-translate-y-full');
-        dictSearch.focus();
-      }, 10);
-    }
-
-    function closeSpotlight() {
-      spotlightOverlay.classList.add('opacity-0');
-      spotlightPanel.classList.add('-translate-y-full');
-      dictSearch.value = '';
-      dictSearch.blur();
-      renderDictionary('');
-      setTimeout(() => {
-        spotlightOverlay.classList.add('hidden');
-      }, 200);
-    }
-
-    closeSpotlightBtn.addEventListener('click', closeSpotlight);
-
-    spotlightOverlay.addEventListener('click', (e) => {
-      if (e.target === spotlightOverlay) closeSpotlight();
-    });
-
-    dictSearch.addEventListener('input', (e) => {
-      renderDictionary(e.target.value);
-    });
-
-    let spotTouchStartY = 0;
-    spotlightOverlay.addEventListener('touchstart', (e) => {
-      spotTouchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    spotlightOverlay.addEventListener('touchmove', (e) => {
-      const diffY = e.touches[0].clientY - spotTouchStartY;
-      if (diffY < -25) closeSpotlight();
-    }, { passive: true });
-
-    let pullStartY = 0;
-    viewDictionary.addEventListener('touchstart', (e) => {
-      if (viewDictionary.scrollTop <= 0) pullStartY = e.touches[0].clientY;
-      else pullStartY = 0;
-    }, { passive: true });
-
-    viewDictionary.addEventListener('touchmove', (e) => {
-      if (pullStartY > 0 && viewDictionary.scrollTop <= 0) {
-        const pullDistance = e.touches[0].clientY - pullStartY;
-        if (pullDistance > 55) {
-          pullStartY = 0;
-          openSpotlight();
+          });
+        });
+      } else {
+        if (allRecs.length === 0) {
+          libraryContent.innerHTML = `<div class="py-16 text-center text-xs font-mono text-neutral-400">No audio notes yet</div>`;
+          return;
         }
-      }
-    }, { passive: true });
 
-    /* 14. ADD EXPRESSION MODAL */
+        allRecs.forEach(rec => {
+          const item = document.createElement('div');
+          item.className = "bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-sm";
+          const chips = (rec.triadPhrases || []).map(p => `
+            <span class="text-[9px] font-mono px-2 py-0.5 rounded-md ${p.used ? 'bg-neutral-950 text-white' : 'border border-neutral-200 text-neutral-400'}">
+              ${p.phrase}
+            </span>
+          `).join('');
+
+          item.innerHTML = `
+            <div class="text-xs font-medium text-neutral-950 mb-2 leading-snug">${rec.prompt || 'Spoken Thought'}</div>
+            <div class="flex flex-wrap gap-1.5 mb-3">${chips}</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-neutral-400 pt-2 border-t border-neutral-100">
+              <span>${new Date(rec.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${rec.duration}s</span>
+              <button class="del-rec-btn p-1 text-neutral-300 hover:text-red-500" data-id="${rec.id}">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5 stroke-[1.5]"></i>
+              </button>
+            </div>
+          `;
+          libraryContent.appendChild(item);
+
+          item.querySelector('.del-rec-btn').addEventListener('click', async () => {
+            await deleteRecording(rec.id);
+            await renderLibrary();
+          });
+        });
+      }
+
+      lucide.createIcons();
+    }
+
+    /* 12. ADD EXPRESSION MODAL */
     const modal = document.getElementById('add-modal');
     const inPhrase = document.getElementById('in-phrase');
     const inExample = document.getElementById('in-example');
@@ -1222,13 +766,6 @@
     window.closeModal = () => modal.classList.add('hidden');
     document.getElementById('open-add-btn').addEventListener('click', openModal);
 
-    inPhrase.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        document.getElementById('add-form').requestSubmit();
-      }
-    });
-
     document.getElementById('add-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const phrase = inPhrase.value.trim();
@@ -1239,18 +776,15 @@
       e.target.reset();
       closeModal();
       await initPracticeSession();
-      if (!viewDictionary.classList.contains('hidden')) {
-        renderDictionary();
-      }
+      if (currentTab === 'library') renderLibrary();
     });
 
-    /* 15. BOOTSTRAP */
+    /* 13. BOOTSTRAP */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDB();
       await seedInitial();
-      renderStreak();
+      updateStreakDisplay();
       await initPracticeSession();
-      resizeCanvas();
       lucide.createIcons();
 
       if ('serviceWorker' in navigator) {
