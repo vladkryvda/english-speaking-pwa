@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Minimal Speaking SRS</title>
+  
+  <meta name="theme-color" id="theme-color-meta" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" id="status-bar-style-meta">
+  <link rel="manifest" href="manifest.json">
+
+  <title>Words</title>
+
   <style>
-    /* ================= БАЗОВІ СТИЛІ ТА ШРИФТ ================= */
     :root {
       --bg-white: #ffffff;
-      --text-black: #111111;
-      --bg-black: #161616;
-      --text-white: #f5f5f5;
-      --dim-opacity: 0.15;
+      --text-black: #000000;
+      --bg-pure-black: #000000;
+      --text-white: #ffffff;
+      --dim-opacity: 0.1;
+      --notion-subtle: #8a8a8a;
     }
 
     * {
@@ -23,77 +30,92 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    body, html {
+    html, body {
       width: 100%;
       height: 100%;
       height: 100dvh;
       overflow: hidden;
       background-color: var(--bg-white);
-      font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Liberation Mono', Menlo, Monaco, Consolas, monospace;
+      color: var(--text-black);
+      /* Нативний системний шрифт: 0ms завантаження, максимальна чистота */
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
       overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    #app {
+    /* БЕЗШОВНИЙ ГОРИЗОНТАЛЬНИЙ КАНВАС З ДВОХ СТОРІНОК */
+    #viewport {
       width: 100%;
       height: 100%;
       position: relative;
+      overflow: hidden;
     }
 
-    /* ================= ЕКРАНИ (VIEWS) ================= */
-    .view {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
+    #track {
+      display: flex;
+      width: 200%;
       height: 100%;
+      transform: translateX(0%);
+      will-change: transform;
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1); /* Нативна крива ковзання iOS */
+    }
+
+    #track.show-archive {
+      transform: translateX(-50%);
+    }
+
+    .page {
+      width: 50%;
+      height: 100%;
+      position: relative;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ГОЛОВНИЙ ЕКРАН */
+    #main-page {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      transition: background-color 0.3s ease, transform 0.25s ease-out;
     }
 
-    /* Головний екран */
-    #main-view {
-      background-color: var(--bg-white);
-      color: var(--text-black);
-      z-index: 10;
-    }
-
-    #main-view.recording-mode,
-    #main-view.review-mode {
-      background-color: var(--bg-black);
+    body.dark-mode {
+      background-color: var(--bg-pure-black);
       color: var(--text-white);
     }
 
-    /* Контейнер слів на головному */
     .words-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3.8rem;
+      gap: 4.8rem;
       width: 100%;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.22s ease, transform 0.15s ease-out;
     }
 
     .word-item {
-      font-size: 2.3rem;
-      font-weight: 500;
-      letter-spacing: -0.5px;
+      font-size: 2.9rem;
+      font-weight: 300;
+      letter-spacing: -0.035em;
       cursor: pointer;
-      position: relative;
-      transition: opacity 0.2s ease;
+      line-height: 1;
+      transition: opacity 0.15s ease, transform 0.1s ease;
     }
 
-    /* Стан закресленого слова */
+    .words-container.pulse-finish {
+      transform: scale(0.96);
+    }
+
     .word-item.struck {
       text-decoration: line-through;
-      text-decoration-thickness: 3.5px;
-      opacity: 0.85;
+      text-decoration-thickness: 2px;
+      opacity: 0.55;
     }
 
-    /* ================= ПОЛЕ ДОДАВАННЯ СЛОВА ================= */
+    /* ПОЛЕ ВВОДУ СЛОВА */
     #add-word-overlay {
       position: absolute;
       top: 0;
@@ -104,7 +126,7 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 20;
+      padding-bottom: 8vh;
     }
 
     #add-word-overlay.active {
@@ -116,8 +138,9 @@
       border: none;
       outline: none;
       font-family: inherit;
-      font-size: 2.3rem;
-      font-weight: 600;
+      font-size: 2.9rem;
+      font-weight: 300;
+      letter-spacing: -0.035em;
       text-align: center;
       color: var(--text-black);
       width: 85%;
@@ -125,133 +148,116 @@
     }
 
     .new-word-input::placeholder {
-      color: rgba(0, 0, 0, 0.25);
+      color: rgba(0, 0, 0, 0.18);
     }
 
-    /* Притемнення фонових слів під час введення */
     .words-container.dimmed {
       opacity: var(--dim-opacity);
     }
 
-    /* ================= АРХІВ + СЛОВНИК ================= */
-    #archive-view {
+    /* СЛОВНИК (NOTION-STYLE) */
+    #archive-page {
       background-color: var(--bg-white);
       color: var(--text-black);
-      transform: translateX(-100%);
-      z-index: 30;
-      justify-content: flex-start;
-      align-items: flex-start;
-      padding: 4rem 2rem 2rem 2rem;
+      padding: calc(3.5rem + env(safe-area-inset-top)) 2.2rem env(safe-area-inset-bottom) 2.2rem;
       overflow-y: auto;
-      user-select: auto;
+      user-select: text;
+      -webkit-user-select: text;
     }
 
-    #archive-view.active {
-      transform: translateX(0);
-    }
-
-    .archive-title {
-      font-size: 1.1rem;
-      font-weight: bold;
-      margin-bottom: 2rem;
-      opacity: 0.4;
-      text-transform: lowercase;
+    .archive-header {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--notion-subtle);
+      margin-bottom: 2.5rem;
+      letter-spacing: -0.01em;
     }
 
     .archive-list {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 1.8rem;
+      gap: 1.5rem;
     }
 
     .archive-item {
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      padding-bottom: 1rem;
+      gap: 0.25rem;
     }
 
     .archive-word {
-      font-size: 1.4rem;
-      font-weight: 500;
+      font-size: 1.35rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
     }
 
     .archive-recordings {
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
-      margin-top: 0.4rem;
+      gap: 0.35rem;
     }
 
-    .audio-player-row {
+    .audio-row {
       display: flex;
       align-items: center;
-      gap: 0.8rem;
-      font-size: 0.85rem;
-      opacity: 0.8;
+      gap: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--notion-subtle);
+      cursor: pointer;
+      width: fit-content;
     }
 
-    .play-btn {
-      cursor: pointer;
-      font-size: 1rem;
-      width: 24px;
+    .audio-row:active {
+      opacity: 0.5;
+    }
+
+    .play-icon {
+      font-size: 0.75rem;
+      width: 12px;
       display: inline-block;
     }
 
-    .progress-bar {
-      flex: 1;
-      height: 2px;
-      background: #111;
-      position: relative;
-    }
-
-    .date-label {
+    .rec-date {
       font-size: 0.75rem;
-      opacity: 0.5;
+      color: var(--notion-subtle);
     }
   </style>
 </head>
 <body>
 
-<div id="app">
-  <!-- ГОЛОВНИЙ ЕКРАН (ТАКОЖ СТАНИ: ЗАПИС, ПІДБИТТЯ ПІДСУМКІВ) -->
-  <div id="main-view" class="view">
-    <div class="words-container" id="words-container"></div>
-    
-    <!-- Поле швидкого вводу нового слова -->
-    <div id="add-word-overlay">
-      <input type="text" id="new-word-input" class="new-word-input" placeholder="new word" autocomplete="off" autocapitalize="none" spellcheck="false" />
-    </div>
-  </div>
+<div id="viewport">
+  <div id="track">
+    <!-- СТОРІНКА 1: ГОЛОВНИЙ ЕКРАН / ЗАПИС / РЕВ'Ю -->
+    <section id="main-page" class="page">
+      <div class="words-container" id="words-container"></div>
+      
+      <div id="add-word-overlay">
+        <input type="text" id="new-word-input" class="new-word-input" placeholder="new word" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      </div>
+    </section>
 
-  <!-- ЕКРАН: СЛОВНИК + АРХІВ -->
-  <div id="archive-view" class="view">
-    <div class="archive-title">словник + архів записів</div>
-    <div class="archive-list" id="archive-list"></div>
+    <!-- СТОРІНКА 2: БЕЗШОВНИЙ СЛОВНИК + АРХІВ -->
+    <section id="archive-page" class="page">
+      <div class="archive-header">словник + архів записів</div>
+      <div class="archive-list" id="archive-list"></div>
+    </section>
   </div>
 </div>
 
 <script>
 /* ================= 1. БАЗА ДАНИХ (INDEXEDDB) ================= */
-const DB_NAME = 'MinimalSRS_DB';
-const DB_VERSION = 1;
+const DB_NAME = 'SpeakingSRS_DB';
+const DB_VERSION = 2;
 let db;
 
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('words')) {
-        const wordStore = db.createObjectStore('words', { keyPath: 'id' });
-        wordStore.createIndex('level', 'level', { unique: false });
-        wordStore.createIndex('nextReview', 'nextReview', { unique: false });
-      }
-      if (!db.objectStoreNames.contains('recordings')) {
-        db.createObjectStore('recordings', { keyPath: 'id' });
-      }
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('words')) d.createObjectStore('words', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('recordings')) d.createObjectStore('recordings', { keyPath: 'id' });
     };
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -261,15 +267,14 @@ function initDB() {
   });
 }
 
-// Початкові слова, якщо база зовсім порожня
 async function seedInitialWords() {
   const words = await getAllWords();
   if (words.length === 0) {
-    const initialList = ['whatever', 'sometimes', 'frank', 'creep', 'freak', 'candid'];
-    for (const text of initialList) {
+    const list = ['figure out', 'whatever', 'sometimes', 'frank', 'creep', 'freak'];
+    for (const text of list) {
       await saveWord({
         id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        text: text.toLowerCase(),
+        text: text,
         level: 0,
         nextReview: 0,
         createdAt: Date.now()
@@ -281,8 +286,7 @@ async function seedInitialWords() {
 function getAllWords() {
   return new Promise((resolve) => {
     const tx = db.transaction('words', 'readonly');
-    const store = tx.objectStore('words');
-    const req = store.getAll();
+    const req = tx.objectStore('words').getAll();
     req.onsuccess = () => resolve(req.result || []);
   });
 }
@@ -306,14 +310,30 @@ function saveRecording(rec) {
 function getAllRecordings() {
   return new Promise((resolve) => {
     const tx = db.transaction('recordings', 'readonly');
-    const store = tx.objectStore('recordings');
-    const req = store.getAll();
+    const req = tx.objectStore('recordings').getAll();
     req.onsuccess = () => resolve(req.result || []);
   });
 }
 
-/* ================= 2. АЛГОРИТМ РОТАЦІЇ СЛІВ (SRS) ================= */
-// Інтервали за рівнями: Рівень 0 (одразу), 1 (4 год), 2 (1 день), 3 (3 дні), 4 (7 днів), 5 (30 днів)
+/* ================= 2. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
+const themeColorMeta = document.getElementById('theme-color-meta');
+const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
+
+function setSystemBarsTheme(isDark) {
+  const color = isDark ? '#000000' : '#ffffff';
+  themeColorMeta.setAttribute('content', color);
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+    if (statusBarStyleMeta) statusBarStyleMeta.setAttribute('content', 'black-translucent');
+  } else {
+    document.body.classList.remove('dark-mode');
+    if (statusBarStyleMeta) statusBarStyleMeta.setAttribute('content', 'default');
+  }
+  document.documentElement.style.backgroundColor = color;
+  document.body.style.backgroundColor = color;
+}
+
+/* ================= 3. АЛГОРИТМ SRS ================= */
 const INTERVALS = [
   0,
   4 * 60 * 60 * 1000,
@@ -328,40 +348,35 @@ async function pickThreeWords() {
   if (all.length <= 3) return all;
 
   const now = Date.now();
-  // Ті, яким настав час повторення
-  let readyPool = all.filter(w => (w.nextReview || 0) <= now);
-  if (readyPool.length < 3) readyPool = [...all];
+  let pool = all.filter(w => (w.nextReview || 0) <= now);
+  if (pool.length < 3) pool = [...all];
 
-  // Сортуємо: спочатку менший рівень + рандомізація
-  readyPool.sort((a, b) => (a.level - b.level) + (Math.random() - 0.5));
-  return readyPool.slice(0, 3);
+  // Сортуємо: рівень 0 (невикористані/нові) мають абсолютний пріоритет
+  pool.sort((a, b) => (a.level - b.level) + (Math.random() - 0.5));
+  return pool.slice(0, 3);
 }
 
-/* ================= 3. ЗВУК ТА АУДІОЗАПИС ================= */
+/* ================= 4. АУДІОЗАПИС ТА СИГНАЛ ================= */
 let audioCtx = null;
 let mediaRecorder = null;
 let audioChunks = [];
-let recordingStartTime = 0;
 let beepTimeout = null;
 let maxLimitTimeout = null;
 
-// Звуковий сигнал на 1:45 через Web Audio (працює без зовнішніх файлів)
 function playBeep() {
   try {
     const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // нота D5
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.frequency.setValueAtTime(520, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.4);
-  } catch (e) {
-    console.warn('AudioContext not allowed yet', e);
-  }
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
 }
 
 async function startAudioRecording() {
@@ -369,26 +384,17 @@ async function startAudioRecording() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
-    
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.push(e.data);
     };
-
     mediaRecorder.start();
-    recordingStartTime = Date.now();
 
-    // Сигнал на 1 хв 45 сек (105 000 мс)
-    beepTimeout = setTimeout(() => {
-      playBeep();
-    }, 105 * 1000);
-
-    // Авто-завершення на 2:00 (120 000 мс)
+    beepTimeout = setTimeout(() => playBeep(), 105 * 1000); // 1:45
     maxLimitTimeout = setTimeout(() => {
       if (appState === 'recording') stopSession();
-    }, 120 * 1000);
-
+    }, 120 * 1000); // 2:00
   } catch (err) {
-    console.warn('Мікрофон недоступний або відхилено:', err);
+    console.warn('Мікрофон недоступний', err);
   }
 }
 
@@ -403,7 +409,6 @@ function stopAudioRecording() {
     }
     mediaRecorder.onstop = () => {
       const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      // Зупиняємо всі аудіодоріжки
       mediaRecorder.stream.getTracks().forEach(t => t.stop());
       resolve(blob);
     };
@@ -411,18 +416,17 @@ function stopAudioRecording() {
   });
 }
 
-/* ================= 4. КЕРУВАННЯ СТАНОМ ТА UI ================= */
-// Стан додатку: 'idle' | 'adding' | 'recording' | 'review' | 'archive'
-let appState = 'idle';
+/* ================= 5. УПРАВЛІННЯ UI ТА ПЕРЕХОДАМИ ================= */
+let appState = 'idle'; 
 let currentWords = [];
 let struckWordIds = new Set();
 let lastRecordedBlob = null;
 
-const mainView = document.getElementById('main-view');
+const track = document.getElementById('track');
+const mainPage = document.getElementById('main-page');
 const wordsContainer = document.getElementById('words-container');
 const addWordOverlay = document.getElementById('add-word-overlay');
 const newWordInput = document.getElementById('new-word-input');
-const archiveView = document.getElementById('archive-view');
 const archiveList = document.getElementById('archive-list');
 
 async function renderMainWords() {
@@ -437,55 +441,50 @@ async function renderMainWords() {
   });
 }
 
-// Запуск сесії запису
 async function startSession() {
   appState = 'recording';
-  mainView.className = 'view recording-mode';
+  setSystemBarsTheme(true);
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   await startAudioRecording();
 }
 
-// Зупинка сесії -> перехід до викреслювання
 async function stopSession() {
   lastRecordedBlob = await stopAudioRecording();
   appState = 'review';
   struckWordIds.clear();
-  mainView.className = 'view review-mode';
+
+  if (navigator.vibrate) navigator.vibrate(40);
+  wordsContainer.classList.add('pulse-finish');
+  setTimeout(() => wordsContainer.classList.remove('pulse-finish'), 150);
 }
 
-// Завершення підсумків сесії -> перехід на новий білий екран
 async function completeReviewAndRefresh() {
-  // Оновлюємо рівні в базі SRS
   for (const w of currentWords) {
     if (struckWordIds.has(w.id)) {
-      // Слово вжито -> +1 рівень
       w.level = Math.min((w.level || 0) + 1, 5);
       w.nextReview = Date.now() + INTERVALS[w.level];
     } else {
-      // Слово пропущено -> скидаємо на 0
       w.level = 0;
       w.nextReview = Date.now();
     }
     await saveWord(w);
   }
 
-  // Зберігаємо запис аудіо в архів
   if (lastRecordedBlob) {
     await saveRecording({
       id: 'rec_' + Date.now(),
-      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      date: new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }),
       blob: lastRecordedBlob,
       words: currentWords.map(w => w.text)
     });
   }
 
-  // Повертаємося до стану очікування
+  setSystemBarsTheme(false);
   appState = 'idle';
-  mainView.className = 'view';
   await renderMainWords();
 }
 
-/* ================= 5. ДОДАВАННЯ СЛІВ (СВАЙП ВНИЗ) ================= */
+/* ================= 6. ДОДАВАННЯ СЛІВ ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
@@ -498,7 +497,6 @@ function openAddWord() {
 async function closeAndSaveNewWord() {
   const text = newWordInput.value.trim().toLowerCase();
   if (text) {
-    // Підтримка кількох слів через кому
     const parts = text.split(/[,+\n]/).map(s => s.trim()).filter(Boolean);
     for (const p of parts) {
       await saveWord({
@@ -517,11 +515,8 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-/* ================= 6. ВІДОБРАЖЕННЯ АРХІВУ ================= */
-async function openArchive() {
-  appState = 'archive';
-  archiveView.classList.add('active');
-  
+/* ================= 7. БЕЗШОВНИЙ СЛОВНИК ================= */
+async function renderArchiveList() {
   const words = await getAllWords();
   const recordings = await getAllRecordings();
   words.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -531,16 +526,13 @@ async function openArchive() {
     const item = document.createElement('div');
     item.className = 'archive-item';
     
-    // Знаходимо записи, де було це слово
     const matchedRecs = recordings.filter(r => r.words && r.words.includes(w.text));
-
     let recsHtml = '';
     matchedRecs.forEach(r => {
       recsHtml += `
-        <div class="audio-player-row">
-          <span class="play-btn" data-id="${r.id}">▶</span>
-          <div class="progress-bar"></div>
-          <span class="date-label">${r.date}</span>
+        <div class="audio-row" data-id="${r.id}">
+          <span class="play-icon">▶</span>
+          <span class="rec-date">${r.date}</span>
         </div>
       `;
     });
@@ -552,30 +544,33 @@ async function openArchive() {
     archiveList.appendChild(item);
   });
 
-  // Логіка відтворення аудіо
-  archiveList.querySelectorAll('.play-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const recId = btn.dataset.id;
-      const rec = recordings.find(r => r.id === recId);
+  archiveList.querySelectorAll('.audio-row').forEach(row => {
+    row.onclick = () => {
+      const rec = recordings.find(r => r.id === row.dataset.id);
       if (!rec || !rec.blob) return;
 
+      const icon = row.querySelector('.play-icon');
       const audioUrl = URL.createObjectURL(rec.blob);
       const audio = new Audio(audioUrl);
-      btn.textContent = '❚❚';
+      icon.textContent = '❚❚';
       audio.play();
-      audio.onended = () => {
-        btn.textContent = '▶';
-      };
+      audio.onended = () => { icon.textContent = '▶'; };
     };
   });
 }
 
+function openArchive() {
+  appState = 'archive';
+  renderArchiveList();
+  track.classList.add('show-archive');
+}
+
 function closeArchive() {
-  archiveView.classList.remove('active');
+  track.classList.remove('show-archive');
   appState = 'idle';
 }
 
-/* ================= 7. ОБРОБКА ТАПІВ ТА СВАЙПІВ ================= */
+/* ================= 8. ТАПИ ТА СВАЙПИ ================= */
 let touchStartX = 0;
 let touchStartY = 0;
 
@@ -590,50 +585,45 @@ window.addEventListener('touchend', async (e) => {
   const absX = Math.abs(diffX);
   const absY = Math.abs(diffY);
 
-  // 1. Свайп вниз (порог > 45px) на головному екрані -> додати слово
+  // Свайп вниз на головному -> додати слово
   if (diffY > 45 && absY > absX && appState === 'idle') {
     openAddWord();
     return;
   }
 
-  // 2. Свайп вгору під час вводу -> зберегти і закрити
+  // Свайп вгору під час вводу -> зберегти
   if (diffY < -45 && absY > absX && appState === 'adding') {
     await closeAndSaveNewWord();
     return;
   }
 
-  // 3. Свайп вправо на головному -> відкрити архів
-  if (diffX > 50 && absX > absY && appState === 'idle') {
-    await openArchive();
+  // Свайп вліво на головному -> плавний перехід у словник
+  if (diffX < -50 && absX > absY && appState === 'idle') {
+    openArchive();
     return;
   }
 
-  // 4. Свайп вліво в архіві -> повернутися на головний
-  if (diffX < -50 && absX > absY && appState === 'archive') {
+  // Свайп вправо у словнику -> плавне повернення
+  if (diffX > 50 && absX > absY && appState === 'archive') {
     closeArchive();
     return;
   }
 });
 
-// Клік / Тап по екрану
-mainView.addEventListener('click', async (e) => {
-  // Якщо ми на головному у стані очікування -> почати запис
+mainPage.addEventListener('click', async (e) => {
   if (appState === 'idle') {
     await startSession();
     return;
   }
 
-  // Якщо йде запис -> тап у будь-яке місце зупиняє запис
   if (appState === 'recording') {
     await stopSession();
     return;
   }
 
-  // Якщо екран підсумків (review)
   if (appState === 'review') {
     const wordEl = e.target.closest('.word-item');
     if (wordEl) {
-      // Тап по слову -> викреслити / зняти викреслення
       const id = wordEl.dataset.id;
       if (struckWordIds.has(id)) {
         struckWordIds.delete(id);
@@ -643,20 +633,26 @@ mainView.addEventListener('click', async (e) => {
         wordEl.classList.add('struck');
       }
     } else {
-      // Тап по порожньому фону -> завершити підсумки і підібрати нові слова
       await completeReviewAndRefresh();
     }
   }
 });
 
-// Закриття поля додавання по клавіші Enter
 newWordInput.addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
     await closeAndSaveNewWord();
   }
 });
 
-// Ініціалізація додатку при завантаженні
+/* ================= 9. РЕЄСТРАЦІЯ SERVICE WORKER ================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('SW failed:', err);
+    });
+  });
+}
+
 initDB().then(() => {
   renderMainWords();
 });
