@@ -18,7 +18,7 @@
       --bg-pure-black: #000000;
       --text-white: #ffffff;
       --notion-subtle: #8a8a8a;
-      --apple-red: #ff3b30;
+      --soft-red: #ea5555;
     }
 
     * {
@@ -40,7 +40,15 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
       overscroll-behavior: none;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.4s cubic-bezier(0.25, 1, 0.3, 1), color 0.4s cubic-bezier(0.25, 1, 0.3, 1);
+      transition: background-color 0.35s cubic-bezier(0.25, 1, 0.3, 1), color 0.35s cubic-bezier(0.25, 1, 0.3, 1);
+    }
+
+    /* Моментальне вимкнення анімації для усунення сірого лагу */
+    body.instant-dark,
+    body.instant-dark .page {
+      transition: none !important;
+      background-color: var(--bg-pure-black) !important;
+      color: var(--text-white) !important;
     }
 
     #viewport {
@@ -50,7 +58,6 @@
       overflow: hidden;
     }
 
-    /* ПЛАВНЕ КОРИСТУВАННЯ ЕКРАНІВ (0.55s замість різкого 0.38s) */
     #track {
       display: flex;
       width: 200%;
@@ -70,7 +77,7 @@
       position: relative;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      transition: background-color 0.4s cubic-bezier(0.25, 1, 0.3, 1), color 0.4s cubic-bezier(0.25, 1, 0.3, 1);
+      transition: background-color 0.35s cubic-bezier(0.25, 1, 0.3, 1), color 0.35s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
     /* ГОЛОВНИЙ ЕКРАН */
@@ -96,9 +103,9 @@
       transition: opacity 0.3s cubic-bezier(0.25, 1, 0.3, 1), transform 0.28s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
-    /* ПОВНЕ ПРИГЛУШЕННЯ ФОНУ ПРИ ВВОДІ */
+    /* ФОН ПРИГЛУШАЄТЬСЯ (НЕ БІЛІЄ) */
     .words-container.dimmed {
-      opacity: 0 !important;
+      opacity: 0.12 !important;
       pointer-events: none;
     }
 
@@ -140,7 +147,7 @@
       transform: scale(0.97);
     }
 
-    /* ПОЛЕ ВВОДУ СЛОВА (БЕЗ ПЛЕЙСХОЛДЕРА) */
+    /* ПОЛЕ ВВОДУ СЛОВА */
     #add-word-overlay {
       position: absolute;
       top: 0;
@@ -189,7 +196,7 @@
       flex-direction: column;
     }
 
-    /* SWIPE-TO-DELETE (APPLE STYLE) */
+    /* SWIPE-TO-DELETE */
     .swipe-wrapper {
       position: relative;
       width: 100%;
@@ -214,19 +221,24 @@
       align-items: center;
     }
 
+    /* КНОПКА СМІТНИКА: ФОН БІЛИЙ, ІКОНКА М'ЯКО-ЧЕРВОНА */
     .swipe-delete-btn {
       position: absolute;
       top: 0;
       right: 0;
       bottom: 0;
-      width: 76px;
-      background-color: var(--apple-red);
-      color: #fff;
+      width: 68px;
+      background-color: var(--bg-white);
+      color: var(--soft-red);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1;
       cursor: pointer;
+    }
+
+    .swipe-delete-btn svg {
+      stroke: var(--soft-red);
     }
 
     .archive-word {
@@ -235,27 +247,77 @@
       letter-spacing: -0.02em;
     }
 
+    /* АУДІОПРОГРАВАЧ */
     .audio-row {
       display: flex;
       align-items: center;
-      gap: 0.8rem;
-      font-size: 0.85rem;
-      color: var(--notion-subtle);
+      gap: 1rem;
       cursor: pointer;
-      width: fit-content;
       user-select: none;
+      width: 100%;
     }
 
-    .play-icon {
-      font-size: 0.85rem;
+    .play-btn-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 16px;
-      display: inline-block;
+      height: 16px;
       color: #000;
+      flex-shrink: 0;
     }
 
+    .play-btn-wrapper svg {
+      fill: currentColor;
+    }
+
+    /* ПОЛОСКА ДОВЖИНИ ТА ПЕРЕМОТУВАННЯ */
+    .audio-track {
+      width: 130px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .audio-track::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: #000000; /* Чорна в спокої */
+      border-radius: 1px;
+    }
+
+    .audio-row.active .audio-track::before {
+      background-color: #e5e5e5; /* Сіра при прослуховуванні */
+    }
+
+    .audio-progress {
+      position: absolute;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background-color: #000000; /* Заповнюється чорним */
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    /* ДАТА: НЕВИДИМА ДО ПОЧАТКУ ПРОСЛУХОВУВАННЯ */
     .rec-date {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: var(--notion-subtle);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      white-space: nowrap;
+    }
+
+    .audio-row.active .rec-date {
+      opacity: 1;
     }
   </style>
 </head>
@@ -397,14 +459,16 @@ function deleteRecordingFromDB(id) {
 const themeColorMeta = document.getElementById('theme-color-meta');
 const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
 
-function setSystemBarsTheme(isDark) {
+function setSystemBarsTheme(isDark, instant = false) {
   const color = isDark ? '#000000' : '#ffffff';
   if (themeColorMeta) themeColorMeta.setAttribute('content', color);
+  
   if (isDark) {
+    if (instant) document.body.classList.add('instant-dark');
     document.body.classList.add('dark-mode');
     if (statusBarStyleMeta) statusBarStyleMeta.setAttribute('content', 'black-translucent');
   } else {
-    document.body.classList.remove('dark-mode');
+    document.body.classList.remove('instant-dark', 'dark-mode');
     if (statusBarStyleMeta) statusBarStyleMeta.setAttribute('content', 'default');
   }
 }
@@ -459,7 +523,6 @@ async function startAudioRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     
-    // Сумісність iOS / Android
     recordedMimeType = 'audio/mp4';
     if (typeof MediaRecorder.isTypeSupported === 'function') {
       if (MediaRecorder.isTypeSupported('audio/mp4')) {
@@ -529,11 +592,12 @@ async function renderMainWords() {
   });
 }
 
-async function startSession() {
+// МОМЕНТАЛЬНИЙ ЧОРНИЙ КОЛІР (БЕЗ СІРОГО ЛАГУ)
+function startSession() {
   appState = 'recording';
-  setSystemBarsTheme(true);
+  setSystemBarsTheme(true, true); // true = instant 0ms dark mode
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  await startAudioRecording();
+  startAudioRecording();
 }
 
 async function stopSession() {
@@ -573,7 +637,7 @@ async function completeReviewAndRefresh() {
     }
   } catch (err) {}
 
-  setSystemBarsTheme(false);
+  setSystemBarsTheme(false, false);
   appState = 'idle';
 
   setTimeout(async () => {
@@ -582,13 +646,14 @@ async function completeReviewAndRefresh() {
   }, 180);
 }
 
-/* ================= 6. ДОДАВАННЯ СЛІВ (ТІЛЬКИ ENTER) ================= */
+/* ================= 6. ДОДАВАННЯ СЛІВ (АВТОФОКУС І ПРИГЛУШЕННЯ) ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
-  wordsContainer.classList.add('dimmed'); // Повне приглушення
+  wordsContainer.classList.add('dimmed');
   addWordOverlay.classList.add('active');
   newWordInput.value = '';
+  // Миттєвий фокус синхронно в момент жесту
   newWordInput.focus();
 }
 
@@ -613,26 +678,38 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-/* ================= 7. СЛОВНИК-ІНБОКС ТА АУДІОПЛЕЄР ================= */
+/* ================= 7. СЛОВНИК-ІНБОКС ТА ПРОГРАВАЧ ================= */
 let activeAudio = null;
 let activeAudioId = null;
-let activePlayBtn = null;
+let activeRowEl = null;
 
-function handlePlayPause(rec, btn) {
+// Векторні SVG іконки
+const SVG_PLAY = `<svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>`;
+const SVG_PAUSE = `<svg width="12" height="12" viewBox="0 0 24 24"><rect x="5" y="3" width="4" height="18"></rect><rect x="15" y="3" width="4" height="18"></rect></svg>`;
+
+function handlePlayPause(rec, rowEl) {
+  const btn = rowEl.querySelector('.play-btn-wrapper');
+  const progressEl = rowEl.querySelector('.audio-progress');
+
   if (activeAudioId === rec.id && activeAudio) {
     if (activeAudio.paused) {
       activeAudio.play();
-      btn.textContent = '❚❚';
+      btn.innerHTML = SVG_PAUSE;
+      rowEl.classList.add('active');
     } else {
       activeAudio.pause();
-      btn.textContent = '▶';
+      btn.innerHTML = SVG_PLAY;
     }
     return;
   }
 
+  // Зупинити попередній трек
   if (activeAudio) {
     activeAudio.pause();
-    if (activePlayBtn) activePlayBtn.textContent = '▶';
+    if (activeRowEl) {
+      activeRowEl.querySelector('.play-btn-wrapper').innerHTML = SVG_PLAY;
+      activeRowEl.classList.remove('active');
+    }
   }
 
   let audioBlob = rec.blob;
@@ -644,19 +721,32 @@ function handlePlayPause(rec, btn) {
   const audioUrl = URL.createObjectURL(audioBlob);
   activeAudio = new Audio(audioUrl);
   activeAudioId = rec.id;
-  activePlayBtn = btn;
+  activeRowEl = rowEl;
 
-  btn.textContent = '❚❚';
+  btn.innerHTML = SVG_PAUSE;
+  rowEl.classList.add('active');
+
   activeAudio.play().catch(e => console.warn(e));
 
+  // Оновлення заповнення полоски чорним кольором
+  activeAudio.ontimeupdate = () => {
+    if (activeAudio && activeAudio.duration) {
+      const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+      progressEl.style.width = pct + '%';
+    }
+  };
+
   activeAudio.onended = () => {
-    btn.textContent = '▶';
+    btn.innerHTML = SVG_PLAY;
+    rowEl.classList.remove('active');
+    progressEl.style.width = '0%';
     activeAudio = null;
     activeAudioId = null;
-    activePlayBtn = null;
+    activeRowEl = null;
   };
+
   activeAudio.onpause = () => {
-    btn.textContent = '▶';
+    btn.innerHTML = SVG_PLAY;
   };
 }
 
@@ -664,7 +754,6 @@ async function renderArchiveList() {
   const words = await getAllWords();
   const recordings = await getAllRecordings();
 
-  // Об'єднуємо в єдиний chronologic feed (Inbox)
   const feed = [
     ...words.map(w => ({ type: 'word', item: w, createdAt: w.createdAt || 0 })),
     ...recordings.map(r => ({ type: 'recording', item: r, createdAt: r.createdAt || 0 }))
@@ -682,7 +771,10 @@ async function renderArchiveList() {
     } else {
       contentHtml = `
         <div class="audio-row" data-id="${entry.item.id}">
-          <span class="play-icon">▶</span>
+          <div class="play-btn-wrapper">${SVG_PLAY}</div>
+          <div class="audio-track">
+            <div class="audio-progress"></div>
+          </div>
           <span class="rec-date">${entry.item.date}</span>
         </div>
       `;
@@ -691,20 +783,35 @@ async function renderArchiveList() {
     wrapper.innerHTML = `
       <div class="swipe-content">${contentHtml}</div>
       <div class="swipe-delete-btn">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         </svg>
       </div>
     `;
 
-    // Аудіоплеєр клік
+    // Аудіоплеєр та клік для перемотування
     if (entry.type === 'recording') {
       const audioRow = wrapper.querySelector('.audio-row');
-      const playIcon = wrapper.querySelector('.play-icon');
-      audioRow.onclick = (e) => {
+      const playBtn = wrapper.querySelector('.play-btn-wrapper');
+      const audioTrack = wrapper.querySelector('.audio-track');
+
+      playBtn.onclick = (e) => {
         e.stopPropagation();
-        handlePlayPause(entry.item, playIcon);
+        handlePlayPause(entry.item, audioRow);
+      };
+
+      // Перемотування при тапі по полосці
+      audioTrack.onclick = (e) => {
+        e.stopPropagation();
+        if (activeAudioId === entry.item.id && activeAudio && activeAudio.duration) {
+          const rect = audioTrack.getBoundingClientRect();
+          const clickPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          activeAudio.currentTime = clickPos * activeAudio.duration;
+          audioTrack.querySelector('.audio-progress').style.width = (clickPos * 100) + '%';
+        } else {
+          handlePlayPause(entry.item, audioRow);
+        }
       };
     }
 
@@ -725,14 +832,11 @@ async function renderArchiveList() {
       setTimeout(() => wrapper.remove(), 350);
     };
 
-    // Жест свайпу для видалення (Swipe-to-delete)
     attachSwipeToDelete(wrapper);
-
     archiveList.appendChild(wrapper);
   });
 }
 
-// Реалізація Apple-style свайпу по елементу
 function attachSwipeToDelete(wrapper) {
   const content = wrapper.querySelector('.swipe-content');
   let itemStartX = 0;
@@ -747,24 +851,24 @@ function attachSwipeToDelete(wrapper) {
   content.addEventListener('touchmove', (e) => {
     const diff = e.touches[0].clientX - itemStartX;
     if (!isOpen && diff < 0) {
-      itemCurrentX = Math.max(diff, -76);
+      itemCurrentX = Math.max(diff, -68);
       content.style.transform = `translateX(${itemCurrentX}px)`;
     } else if (isOpen && diff > 0) {
-      itemCurrentX = Math.min(-76 + diff, 0);
+      itemCurrentX = Math.min(-68 + diff, 0);
       content.style.transform = `translateX(${itemCurrentX}px)`;
     }
   }, { passive: true });
 
   content.addEventListener('touchend', () => {
     content.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.3, 1)';
-    if (!isOpen && itemCurrentX < -38) {
-      content.style.transform = 'translateX(-76px)';
+    if (!isOpen && itemCurrentX < -34) {
+      content.style.transform = 'translateX(-68px)';
       isOpen = true;
-    } else if (isOpen && itemCurrentX > -38) {
+    } else if (isOpen && itemCurrentX > -34) {
       content.style.transform = 'translateX(0px)';
       isOpen = false;
     } else {
-      content.style.transform = isOpen ? 'translateX(-76px)' : 'translateX(0px)';
+      content.style.transform = isOpen ? 'translateX(-68px)' : 'translateX(0px)';
     }
   });
 }
@@ -809,19 +913,19 @@ window.addEventListener('pointerup', async (e) => {
   if (absX > 45 || absY > 45) {
     didSwipe = true;
 
-    // Свайп вниз на головному -> введення слова
+    // Свайп вниз на головному -> ввід слова з автовибором
     if (diffY > 45 && absY > absX && appState === 'idle') {
       openAddWord();
       return;
     }
 
-    // Свайп вліво -> відкрити словник
+    // Свайп вліво -> словник
     if (diffX < -45 && absX > absY && appState === 'idle') {
       openArchive();
       return;
     }
 
-    // Свайп вправо -> закрити словник
+    // Свайп вправо -> вихід зі словника
     if (diffX > 45 && absX > absY && appState === 'archive') {
       closeArchive();
       return;
@@ -829,12 +933,12 @@ window.addEventListener('pointerup', async (e) => {
   }
 });
 
-// Клік / Тап по екрану
+// Клік / Тап
 document.getElementById('main-page').addEventListener('click', async (e) => {
   if (didSwipe) return;
 
   if (appState === 'idle') {
-    await startSession();
+    startSession(); // Моментальний чорний перехід
     return;
   }
 
@@ -860,7 +964,6 @@ document.getElementById('main-page').addEventListener('click', async (e) => {
   }
 });
 
-// ДОДАВАННЯ СЛОВА ТІЛЬКИ НА ENTER
 newWordInput.addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
     await closeAndSaveNewWord();
