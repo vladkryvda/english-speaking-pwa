@@ -7,6 +7,10 @@
   <meta name="theme-color" id="theme-color-meta" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default" id="status-bar-style-meta">
+  
+  <!-- Посилання на SVG іконку -->
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
 
   <title>Words</title>
@@ -21,6 +25,7 @@
       --soft-red: #ea5555;
     }
 
+    /* ПРИХОВУВАННЯ СКРОЛБАРІВ ТА БЛОКУВАННЯ ЗУМУ */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -28,6 +33,15 @@
       user-select: none;
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
 
     html, body {
@@ -39,14 +53,14 @@
       color: var(--text-black);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
       overscroll-behavior: none;
+      touch-action: pan-x pan-y;
+      -webkit-text-size-adjust: 100%;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.35s cubic-bezier(0.25, 1, 0.3, 1), color 0.35s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
-    /* Моментальне вимкнення анімації для усунення сірого лагу */
+    /* Моментальне синхронне перемикання кольору без розриву */
     body.instant-dark,
     body.instant-dark .page {
-      transition: none !important;
       background-color: var(--bg-pure-black) !important;
       color: var(--text-white) !important;
     }
@@ -77,7 +91,6 @@
       position: relative;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      transition: background-color 0.35s cubic-bezier(0.25, 1, 0.3, 1), color 0.35s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
     /* ГОЛОВНИЙ ЕКРАН */
@@ -86,6 +99,7 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      touch-action: none;
     }
 
     body.dark-mode {
@@ -103,7 +117,6 @@
       transition: opacity 0.3s cubic-bezier(0.25, 1, 0.3, 1), transform 0.28s cubic-bezier(0.25, 1, 0.3, 1);
     }
 
-    /* ФОН ПРИГЛУШАЄТЬСЯ (НЕ БІЛІЄ) */
     .words-container.dimmed {
       opacity: 0.12 !important;
       pointer-events: none;
@@ -147,22 +160,29 @@
       transform: scale(0.97);
     }
 
-    /* ПОЛЕ ВВОДУ СЛОВА */
+    /* ПОЛЕ ВВОДУ СЛОВА (ГОТОВЕ ДО МИТТЄВОГО МИГАННЯ КУРСОРА) */
     #add-word-overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      display: none;
+      display: flex;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       padding-bottom: 8vh;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      z-index: 20;
     }
 
     #add-word-overlay.active {
-      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
     }
 
     .new-word-input {
@@ -221,7 +241,6 @@
       align-items: center;
     }
 
-    /* КНОПКА СМІТНИКА: ФОН БІЛИЙ, ІКОНКА М'ЯКО-ЧЕРВОНА */
     .swipe-delete-btn {
       position: absolute;
       top: 0;
@@ -241,10 +260,47 @@
       stroke: var(--soft-red);
     }
 
+    /* СЛОВО ТА МІКРО-КРАПКИ ПРОГРЕСУ В СЛОВНИКУ */
+    .archive-word-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      cursor: pointer;
+      position: relative;
+    }
+
     .archive-word {
       font-size: 1.35rem;
       font-weight: 400;
       letter-spacing: -0.02em;
+    }
+
+    .word-progress-dots {
+      display: flex;
+      gap: 4.5px;
+      align-items: center;
+      height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: opacity 0.22s ease, height 0.22s ease, margin-top 0.22s ease;
+      margin-top: 0;
+    }
+
+    .word-progress-dots.visible {
+      height: 6px;
+      opacity: 1;
+      margin-top: 5px;
+    }
+
+    .dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background-color: #dedede;
+    }
+
+    .dot.active {
+      background-color: #000000;
     }
 
     /* АУДІОПРОГРАВАЧ */
@@ -271,7 +327,6 @@
       fill: currentColor;
     }
 
-    /* ПОЛОСКА ДОВЖИНИ ТА ПЕРЕМОТУВАННЯ */
     .audio-track {
       width: 130px;
       height: 20px;
@@ -288,12 +343,12 @@
       left: 0;
       right: 0;
       height: 2px;
-      background-color: #000000; /* Чорна в спокої */
+      background-color: #000000;
       border-radius: 1px;
     }
 
     .audio-row.active .audio-track::before {
-      background-color: #e5e5e5; /* Сіра при прослуховуванні */
+      background-color: #e5e5e5;
     }
 
     .audio-progress {
@@ -301,12 +356,11 @@
       left: 0;
       height: 2px;
       width: 0%;
-      background-color: #000000; /* Заповнюється чорним */
+      background-color: #000000;
       border-radius: 1px;
       pointer-events: none;
     }
 
-    /* ДАТА: НЕВИДИМА ДО ПОЧАТКУ ПРОСЛУХОВУВАННЯ */
     .rec-date {
       font-size: 0.75rem;
       color: var(--notion-subtle);
@@ -455,14 +509,18 @@ function deleteRecordingFromDB(id) {
   });
 }
 
-/* ================= 2. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
+/* ================= 2. СИНХРОННІ СИСТЕМНІ СМУГИ (СТАТУС-БАР ТА ІНДИКАТОР) ================= */
 const themeColorMeta = document.getElementById('theme-color-meta');
 const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
 
 function setSystemBarsTheme(isDark, instant = false) {
   const color = isDark ? '#000000' : '#ffffff';
-  if (themeColorMeta) themeColorMeta.setAttribute('content', color);
   
+  // Одночасне оновлення canvas + meta + dom root
+  if (themeColorMeta) themeColorMeta.setAttribute('content', color);
+  document.documentElement.style.backgroundColor = color;
+  document.body.style.backgroundColor = color;
+
   if (isDark) {
     if (instant) document.body.classList.add('instant-dark');
     document.body.classList.add('dark-mode');
@@ -592,10 +650,9 @@ async function renderMainWords() {
   });
 }
 
-// МОМЕНТАЛЬНИЙ ЧОРНИЙ КОЛІР (БЕЗ СІРОГО ЛАГУ)
 function startSession() {
   appState = 'recording';
-  setSystemBarsTheme(true, true); // true = instant 0ms dark mode
+  setSystemBarsTheme(true, true);
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   startAudioRecording();
 }
@@ -637,24 +694,35 @@ async function completeReviewAndRefresh() {
     }
   } catch (err) {}
 
-  setSystemBarsTheme(false, false);
+  // Одночасна зміна на білий колір
+  setSystemBarsTheme(false, true);
   appState = 'idle';
 
   setTimeout(async () => {
     await renderMainWords();
     wordsContainer.style.opacity = '1';
-  }, 180);
+  }, 160);
 }
 
-/* ================= 6. ДОДАВАННЯ СЛІВ (АВТОФОКУС І ПРИГЛУШЕННЯ) ================= */
+/* ================= 6. ДОДАВАННЯ СЛІВ (МИТТЄВИЙ КУРСОР ТА СКАСУВАННЯ) ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
   wordsContainer.classList.add('dimmed');
   addWordOverlay.classList.add('active');
   newWordInput.value = '';
-  // Миттєвий фокус синхронно в момент жесту
+  
+  // Миттєвий фокус синхронно
   newWordInput.focus();
+  newWordInput.setSelectionRange(0, 0);
+}
+
+function cancelAddWord() {
+  newWordInput.value = '';
+  newWordInput.blur();
+  addWordOverlay.classList.remove('active');
+  wordsContainer.classList.remove('dimmed');
+  appState = 'idle';
 }
 
 async function closeAndSaveNewWord() {
@@ -678,12 +746,18 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-/* ================= 7. СЛОВНИК-ІНБОКС ТА ПРОГРАВАЧ ================= */
+// Тап повз поле вводу скасовує додавання
+addWordOverlay.addEventListener('click', (e) => {
+  if (e.target === addWordOverlay) {
+    cancelAddWord();
+  }
+});
+
+/* ================= 7. СЛОВНИК-ІНБОКС ТА МІКРО-КРАПКИ ================= */
 let activeAudio = null;
 let activeAudioId = null;
 let activeRowEl = null;
 
-// Векторні SVG іконки
 const SVG_PLAY = `<svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>`;
 const SVG_PAUSE = `<svg width="12" height="12" viewBox="0 0 24 24"><rect x="5" y="3" width="4" height="18"></rect><rect x="15" y="3" width="4" height="18"></rect></svg>`;
 
@@ -703,7 +777,6 @@ function handlePlayPause(rec, rowEl) {
     return;
   }
 
-  // Зупинити попередній трек
   if (activeAudio) {
     activeAudio.pause();
     if (activeRowEl) {
@@ -728,7 +801,6 @@ function handlePlayPause(rec, rowEl) {
 
   activeAudio.play().catch(e => console.warn(e));
 
-  // Оновлення заповнення полоски чорним кольором
   activeAudio.ontimeupdate = () => {
     if (activeAudio && activeAudio.duration) {
       const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
@@ -767,7 +839,18 @@ async function renderArchiveList() {
 
     let contentHtml = '';
     if (entry.type === 'word') {
-      contentHtml = `<div class="archive-word">${entry.item.text}</div>`;
+      const lvl = entry.item.level || 0;
+      let dotsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        dotsHtml += `<span class="dot ${i <= lvl ? 'active' : ''}"></span>`;
+      }
+
+      contentHtml = `
+        <div class="archive-word-wrapper">
+          <div class="archive-word">${entry.item.text}</div>
+          <div class="word-progress-dots">${dotsHtml}</div>
+        </div>
+      `;
     } else {
       contentHtml = `
         <div class="audio-row" data-id="${entry.item.id}">
@@ -790,7 +873,17 @@ async function renderArchiveList() {
       </div>
     `;
 
-    // Аудіоплеєр та клік для перемотування
+    // ТАП ПО СЛОВУ В СЛОВНИКУ -> ПОКАЗ / ПРИХОВУВАННЯ МІКРО-КРАПОК
+    if (entry.type === 'word') {
+      const wordWrapper = wrapper.querySelector('.archive-word-wrapper');
+      wordWrapper.onclick = (e) => {
+        e.stopPropagation();
+        const dotsEl = wordWrapper.querySelector('.word-progress-dots');
+        dotsEl.classList.toggle('visible');
+      };
+    }
+
+    // Аудіоплеєр та перемотування
     if (entry.type === 'recording') {
       const audioRow = wrapper.querySelector('.audio-row');
       const playBtn = wrapper.querySelector('.play-btn-wrapper');
@@ -801,7 +894,6 @@ async function renderArchiveList() {
         handlePlayPause(entry.item, audioRow);
       };
 
-      // Перемотування при тапі по полосці
       audioTrack.onclick = (e) => {
         e.stopPropagation();
         if (activeAudioId === entry.item.id && activeAudio && activeAudio.duration) {
@@ -913,7 +1005,7 @@ window.addEventListener('pointerup', async (e) => {
   if (absX > 45 || absY > 45) {
     didSwipe = true;
 
-    // Свайп вниз на головному -> ввід слова з автовибором
+    // Свайп вниз на головному -> ввід слова
     if (diffY > 45 && absY > absX && appState === 'idle') {
       openAddWord();
       return;
@@ -933,12 +1025,12 @@ window.addEventListener('pointerup', async (e) => {
   }
 });
 
-// Клік / Тап
+// Клік / Тап по головному екрану
 document.getElementById('main-page').addEventListener('click', async (e) => {
   if (didSwipe) return;
 
   if (appState === 'idle') {
-    startSession(); // Моментальний чорний перехід
+    startSession();
     return;
   }
 
