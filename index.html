@@ -104,76 +104,6 @@
       color: var(--text-white);
     }
 
-    /* ЖИВИЙ МІКРО-БЕЙДЖИК «СПЛЯЧА ЗВУКОВА ХВИЛЯ» */
-    #daily-badge {
-      position: absolute;
-      top: calc(1.4rem + env(safe-area-inset-top));
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 6px 10px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s cubic-bezier(0.25, 1, 0.3, 1), transform 0.3s ease;
-      cursor: pointer;
-      z-index: 15;
-    }
-
-    #daily-badge.visible {
-      opacity: 0.35;
-      pointer-events: auto;
-    }
-
-    #daily-badge.visible:active {
-      opacity: 0.85;
-    }
-
-    /* Анімовані смужки хвилі */
-    .wave-bars {
-      display: flex;
-      align-items: center;
-      gap: 2.5px;
-      height: 12px;
-    }
-
-    .wave-bar {
-      width: 2px;
-      background-color: currentColor;
-      border-radius: 1px;
-      animation: sleepingWave 2.8s ease-in-out infinite;
-    }
-
-    .wave-bar:nth-child(1) { height: 5px; animation-delay: 0.0s; }
-    .wave-bar:nth-child(2) { height: 11px; animation-delay: 0.25s; }
-    .wave-bar:nth-child(3) { height: 6px; animation-delay: 0.5s; }
-
-    @keyframes sleepingWave {
-      0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
-      50% { transform: scaleY(1); opacity: 1; }
-    }
-
-    .badge-hint {
-      font-size: 0.72rem;
-      letter-spacing: -0.01em;
-      max-width: 0;
-      overflow: hidden;
-      white-space: nowrap;
-      transition: max-width 0.35s cubic-bezier(0.25, 1, 0.3, 1), opacity 0.3s ease;
-      opacity: 0;
-    }
-
-    #daily-badge.expanded .badge-hint {
-      max-width: 120px;
-      opacity: 0.8;
-      margin-left: 2px;
-    }
-
-    /* Під час запису бейджик ховається, щоб не відволікати */
-    body.dark-mode #daily-badge {
-      opacity: 0 !important;
-      pointer-events: none;
-    }
-
     .words-container {
       display: flex;
       flex-direction: column;
@@ -444,19 +374,7 @@
 
 <div id="viewport">
   <div id="track">
-    <!-- СТОРІНКА 1: ГОЛОВНА -->
     <section id="main-page" class="page">
-      
-      <!-- БЕЙДЖИК «ГОЛОС СПИТЬ» -->
-      <div id="daily-badge">
-        <div class="wave-bars">
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-        </div>
-        <span class="badge-hint">голос спить</span>
-      </div>
-
       <div class="words-container" id="words-container"></div>
       
       <div id="add-word-overlay">
@@ -464,7 +382,6 @@
       </div>
     </section>
 
-    <!-- СТОРІНКА 2: СЛОВНИК-ІНБОКС -->
     <section id="archive-page" class="page">
       <div class="archive-list" id="archive-list"></div>
     </section>
@@ -578,6 +495,7 @@ async function saveRecordingSafe(rec) {
       tx.oncomplete = () => {
         resolve();
         triggerWifiSync();
+        updateAppBadge(); // Оновлюємо бейджик після збереження
       };
       tx.onerror = () => resolve();
     } catch (err) {
@@ -605,53 +523,36 @@ function deleteRecordingFromDB(id) {
     tx.oncomplete = () => {
       resolve();
       triggerWifiSync();
+      updateAppBadge();
     };
     tx.onerror = () => resolve();
   });
 }
 
-/* ================= 2. БЕЙДЖИК НАГАДУВАННЯ (ДОДАТОК + ІКОНКА ТЕЛЕФОНУ) ================= */
-const dailyBadgeEl = document.getElementById('daily-badge');
+/* ================= 2. СИСТЕМНИЙ БЕЙДЖИК НА ІКОНЦІ (PWA BADGE API) ================= */
+async function updateAppBadge() {
+  if (!('setAppBadge' in navigator)) return;
+  try {
+    const recordings = await getAllRecordings();
+    const todayStr = new Date().toDateString();
+    
+    // Перевіряємо, чи був хоч один запис сьогодні
+    const practicedToday = recordings.some(r => {
+      const recDate = new Date(r.createdAt || 0).toDateString();
+      return recDate === todayStr;
+    });
 
-function hasPracticedToday(recordings) {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  return recordings.some(r => (r.createdAt || 0) >= startOfToday);
-}
-
-async function updateDailyBadge() {
-  const recordings = await getAllRecordings();
-  const practiced = hasPracticedToday(recordings);
-
-  // 1. Індикатор всередині сайту
-  if (!practiced) {
-    dailyBadgeEl.classList.add('visible');
-  } else {
-    dailyBadgeEl.classList.remove('visible');
-  }
-
-  // 2. Системний бейджик на іконці телефону (iOS 16.4+ / Android PWA)
-  if ('setAppBadge' in navigator) {
-    try {
-      if (!practiced) {
-        navigator.setAppBadge(1);
-      } else {
-        navigator.clearAppBadge();
+    if (practicedToday) {
+      // Якщо займався — знімаємо бейджик з іконки
+      if ('clearAppBadge' in navigator) {
+        navigator.clearAppBadge().catch(() => {});
       }
-    } catch (e) {}
-  }
+    } else {
+      // Якщо сьогодні ще не було практики — ставимо бейджик 1
+      navigator.setAppBadge(1).catch(() => {});
+    }
+  } catch (e) {}
 }
-
-// Тап по хвилі відкриває підказку «голос спить»
-let badgeHintTimeout;
-dailyBadgeEl.addEventListener('click', (e) => {
-  e.stopPropagation();
-  dailyBadgeEl.classList.add('expanded');
-  clearTimeout(badgeHintTimeout);
-  badgeHintTimeout = setTimeout(() => {
-    dailyBadgeEl.classList.remove('expanded');
-  }, 2200);
-});
 
 /* ================= 3. ПЕРЕВІРКА WI-FI ТА СИНХРОНІЗАЦІЯ ================= */
 function isWifiConnection() {
@@ -820,9 +721,7 @@ async function startAudioRecording() {
       }
     }
 
-    const options = {
-      audioBitsPerSecond: 28000
-    };
+    const options = { audioBitsPerSecond: 28000 };
     if (recordedMimeType) options.mimeType = recordedMimeType;
 
     mediaRecorder = new MediaRecorder(stream, options);
@@ -935,11 +834,11 @@ async function completeReviewAndRefresh() {
   setTimeout(async () => {
     await renderMainWords();
     wordsContainer.style.opacity = '1';
-    await updateDailyBadge(); // Оновлюємо та приховуємо бейджик після практики
+    updateAppBadge(); // Оновлення бейджика після сесії
   }, 160);
 }
 
-/* ================= 8. ДОДАВАННЯ СЛІВ (БЕЗ ПАНЕЛІ SAFARI) ================= */
+/* ================= 8. ДОДАВАННЯ СЛІВ ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
@@ -947,6 +846,7 @@ function openAddWord() {
   wordsContainer.classList.add('dimmed');
   addWordOverlay.classList.add('active');
   newWordInput.textContent = '';
+  
   newWordInput.focus();
 }
 
@@ -1156,7 +1056,6 @@ async function renderArchiveList() {
           activeAudio.pause();
           activeAudio = null;
         }
-        await updateDailyBadge();
       }
       setTimeout(() => wrapper.remove(), 350);
     };
@@ -1300,13 +1199,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Оновлюємо статус бейджика при поверненні в додаток
-window.addEventListener('focus', updateDailyBadge);
-
-initDB().then(async () => {
-  await renderMainWords();
-  await updateDailyBadge();
+initDB().then(() => {
+  renderMainWords();
   triggerWifiSync();
+  updateAppBadge(); // Перевірка бейджика при відкритті
 });
 </script>
 </body>
