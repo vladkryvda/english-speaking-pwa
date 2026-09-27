@@ -104,6 +104,76 @@
       color: var(--text-white);
     }
 
+    /* ЖИВИЙ МІКРО-БЕЙДЖИК «СПЛЯЧА ЗВУКОВА ХВИЛЯ» */
+    #daily-badge {
+      position: absolute;
+      top: calc(1.4rem + env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s cubic-bezier(0.25, 1, 0.3, 1), transform 0.3s ease;
+      cursor: pointer;
+      z-index: 15;
+    }
+
+    #daily-badge.visible {
+      opacity: 0.35;
+      pointer-events: auto;
+    }
+
+    #daily-badge.visible:active {
+      opacity: 0.85;
+    }
+
+    /* Анімовані смужки хвилі */
+    .wave-bars {
+      display: flex;
+      align-items: center;
+      gap: 2.5px;
+      height: 12px;
+    }
+
+    .wave-bar {
+      width: 2px;
+      background-color: currentColor;
+      border-radius: 1px;
+      animation: sleepingWave 2.8s ease-in-out infinite;
+    }
+
+    .wave-bar:nth-child(1) { height: 5px; animation-delay: 0.0s; }
+    .wave-bar:nth-child(2) { height: 11px; animation-delay: 0.25s; }
+    .wave-bar:nth-child(3) { height: 6px; animation-delay: 0.5s; }
+
+    @keyframes sleepingWave {
+      0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+      50% { transform: scaleY(1); opacity: 1; }
+    }
+
+    .badge-hint {
+      font-size: 0.72rem;
+      letter-spacing: -0.01em;
+      max-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: max-width 0.35s cubic-bezier(0.25, 1, 0.3, 1), opacity 0.3s ease;
+      opacity: 0;
+    }
+
+    #daily-badge.expanded .badge-hint {
+      max-width: 120px;
+      opacity: 0.8;
+      margin-left: 2px;
+    }
+
+    /* Під час запису бейджик ховається, щоб не відволікати */
+    body.dark-mode #daily-badge {
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+
     .words-container {
       display: flex;
       flex-direction: column;
@@ -179,7 +249,6 @@
       pointer-events: auto;
     }
 
-    /* БЕЗ СМУЖКИ НАВІГАЦІЇ SAFARI (CONTENTEDITABLE) */
     .new-word-input {
       background: transparent;
       border: none;
@@ -375,15 +444,27 @@
 
 <div id="viewport">
   <div id="track">
+    <!-- СТОРІНКА 1: ГОЛОВНА -->
     <section id="main-page" class="page">
+      
+      <!-- БЕЙДЖИК «ГОЛОС СПИТЬ» -->
+      <div id="daily-badge">
+        <div class="wave-bars">
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+        </div>
+        <span class="badge-hint">голос спить</span>
+      </div>
+
       <div class="words-container" id="words-container"></div>
       
       <div id="add-word-overlay">
-        <!-- contenteditable прибирає панель зі стрілками та галочкою -->
         <div id="new-word-input" class="new-word-input" contenteditable="plaintext-only" spellcheck="false" autocapitalize="none" inputmode="text"></div>
       </div>
     </section>
 
+    <!-- СТОРІНКА 2: СЛОВНИК-ІНБОКС -->
     <section id="archive-page" class="page">
       <div class="archive-list" id="archive-list"></div>
     </section>
@@ -529,10 +610,52 @@ function deleteRecordingFromDB(id) {
   });
 }
 
-/* ================= 2. ПЕРЕВІРКА WI-FI ТА СИНХРОНІЗАЦІЯ ================= */
+/* ================= 2. БЕЙДЖИК НАГАДУВАННЯ (ДОДАТОК + ІКОНКА ТЕЛЕФОНУ) ================= */
+const dailyBadgeEl = document.getElementById('daily-badge');
+
+function hasPracticedToday(recordings) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return recordings.some(r => (r.createdAt || 0) >= startOfToday);
+}
+
+async function updateDailyBadge() {
+  const recordings = await getAllRecordings();
+  const practiced = hasPracticedToday(recordings);
+
+  // 1. Індикатор всередині сайту
+  if (!practiced) {
+    dailyBadgeEl.classList.add('visible');
+  } else {
+    dailyBadgeEl.classList.remove('visible');
+  }
+
+  // 2. Системний бейджик на іконці телефону (iOS 16.4+ / Android PWA)
+  if ('setAppBadge' in navigator) {
+    try {
+      if (!practiced) {
+        navigator.setAppBadge(1);
+      } else {
+        navigator.clearAppBadge();
+      }
+    } catch (e) {}
+  }
+}
+
+// Тап по хвилі відкриває підказку «голос спить»
+let badgeHintTimeout;
+dailyBadgeEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  dailyBadgeEl.classList.add('expanded');
+  clearTimeout(badgeHintTimeout);
+  badgeHintTimeout = setTimeout(() => {
+    dailyBadgeEl.classList.remove('expanded');
+  }, 2200);
+});
+
+/* ================= 3. ПЕРЕВІРКА WI-FI ТА СИНХРОНІЗАЦІЯ ================= */
 function isWifiConnection() {
   if (!navigator.onLine) return false;
-  
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   if (conn) {
     if (conn.type) {
@@ -609,7 +732,7 @@ if (navigator.connection) {
   navigator.connection.addEventListener('change', triggerWifiSync);
 }
 
-/* ================= 3. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
+/* ================= 4. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
 const themeColorMeta = document.getElementById('theme-color-meta');
 const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
 
@@ -629,7 +752,7 @@ function setSystemBarsTheme(isDark, instant = false) {
   }
 }
 
-/* ================= 4. АЛГОРИТМ SRS ================= */
+/* ================= 5. АЛГОРИТМ SRS ================= */
 const INTERVALS = [
   0,
   4 * 60 * 60 * 1000,
@@ -651,7 +774,7 @@ async function pickThreeWords() {
   return pool.slice(0, 3);
 }
 
-/* ================= 5. АУДІОЗАПИС ЗІ СТИСНЕННЯМ (28 KBPS MONO) ================= */
+/* ================= 6. АУДІОЗАПИС ЗІ СТИСНЕННЯМ (28 KBPS MONO) ================= */
 let audioCtx = null;
 let mediaRecorder = null;
 let audioChunks = [];
@@ -736,7 +859,7 @@ function stopAudioRecording() {
   });
 }
 
-/* ================= 6. УПРАВЛІННЯ UI ================= */
+/* ================= 7. УПРАВЛІННЯ UI ================= */
 let appState = 'idle'; 
 let currentWords = [];
 let struckWordIds = new Set();
@@ -812,10 +935,11 @@ async function completeReviewAndRefresh() {
   setTimeout(async () => {
     await renderMainWords();
     wordsContainer.style.opacity = '1';
+    await updateDailyBadge(); // Оновлюємо та приховуємо бейджик після практики
   }, 160);
 }
 
-/* ================= 7. ДОДАВАННЯ СЛІВ (БЕЗ ПАНЕЛІ SAFARI) ================= */
+/* ================= 8. ДОДАВАННЯ СЛІВ (БЕЗ ПАНЕЛІ SAFARI) ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
@@ -823,7 +947,6 @@ function openAddWord() {
   wordsContainer.classList.add('dimmed');
   addWordOverlay.classList.add('active');
   newWordInput.textContent = '';
-  
   newWordInput.focus();
 }
 
@@ -869,7 +992,7 @@ addWordOverlay.addEventListener('click', (e) => {
   }
 });
 
-/* ================= 8. СЛОВНИК-ІНБОКС ТА АУДІО ================= */
+/* ================= 9. СЛОВНИК-ІНБОКС ТА АУДІО ================= */
 let activeAudio = null;
 let activeAudioId = null;
 let activeRowEl = null;
@@ -1033,6 +1156,7 @@ async function renderArchiveList() {
           activeAudio.pause();
           activeAudio = null;
         }
+        await updateDailyBadge();
       }
       setTimeout(() => wrapper.remove(), 350);
     };
@@ -1093,7 +1217,7 @@ function closeArchive() {
   }
 }
 
-/* ================= 9. ЖЕСТИ ТА ТАПИ ================= */
+/* ================= 10. ЖЕСТИ ТА ТАПИ ================= */
 let startX = 0;
 let startY = 0;
 let isDragging = false;
@@ -1176,8 +1300,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-initDB().then(() => {
-  renderMainWords();
+// Оновлюємо статус бейджика при поверненні в додаток
+window.addEventListener('focus', updateDailyBadge);
+
+initDB().then(async () => {
+  await renderMainWords();
+  await updateDailyBadge();
   triggerWifiSync();
 });
 </script>
