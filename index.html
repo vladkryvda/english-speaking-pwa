@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default" id="status-bar-style-meta">
   
-  <!-- Посилання на SVG іконку -->
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
@@ -25,7 +24,6 @@
       --soft-red: #ea5555;
     }
 
-    /* ПРИХОВУВАННЯ СКРОЛБАРІВ ТА БЛОКУВАННЯ ЗУМУ */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -58,7 +56,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Моментальне синхронне перемикання кольору без розриву */
     body.instant-dark,
     body.instant-dark .page {
       background-color: var(--bg-pure-black) !important;
@@ -122,7 +119,6 @@
       pointer-events: none;
     }
 
-    /* ПЛАВНЕ ЗАКРЕСЛЕННЯ СЛОВА */
     .word-item {
       font-size: 2.9rem;
       font-weight: 300;
@@ -160,7 +156,7 @@
       transform: scale(0.97);
     }
 
-    /* ПОЛЕ ВВОДУ СЛОВА (ГОТОВЕ ДО МИТТЄВОГО МИГАННЯ КУРСОРА) */
+    /* ПОЛЕ ВВОДУ СЛОВА: ЗАВЖДИ В DOM, БЕЗ VISIBILITY:HIDDEN */
     #add-word-overlay {
       position: absolute;
       top: 0;
@@ -170,19 +166,17 @@
       display: flex;
       opacity: 0;
       pointer-events: none;
-      visibility: hidden;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       padding-bottom: 8vh;
-      transition: opacity 0.2s ease, visibility 0.2s ease;
-      z-index: 20;
+      transition: opacity 0.18s ease;
+      z-index: 30;
     }
 
     #add-word-overlay.active {
       opacity: 1;
       pointer-events: auto;
-      visibility: visible;
     }
 
     .new-word-input {
@@ -216,7 +210,6 @@
       flex-direction: column;
     }
 
-    /* SWIPE-TO-DELETE */
     .swipe-wrapper {
       position: relative;
       width: 100%;
@@ -260,7 +253,6 @@
       stroke: var(--soft-red);
     }
 
-    /* СЛОВО ТА МІКРО-КРАПКИ ПРОГРЕСУ В СЛОВНИКУ */
     .archive-word-wrapper {
       display: flex;
       flex-direction: column;
@@ -303,7 +295,6 @@
       background-color: #000000;
     }
 
-    /* АУДІОПРОГРАВАЧ */
     .audio-row {
       display: flex;
       align-items: center;
@@ -384,7 +375,7 @@
       <div class="words-container" id="words-container"></div>
       
       <div id="add-word-overlay">
-        <input type="text" id="new-word-input" class="new-word-input" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        <input type="text" id="new-word-input" class="new-word-input" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="text" />
       </div>
     </section>
 
@@ -509,14 +500,13 @@ function deleteRecordingFromDB(id) {
   });
 }
 
-/* ================= 2. СИНХРОННІ СИСТЕМНІ СМУГИ (СТАТУС-БАР ТА ІНДИКАТОР) ================= */
+/* ================= 2. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
 const themeColorMeta = document.getElementById('theme-color-meta');
 const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
 
 function setSystemBarsTheme(isDark, instant = false) {
   const color = isDark ? '#000000' : '#ffffff';
   
-  // Одночасне оновлення canvas + meta + dom root
   if (themeColorMeta) themeColorMeta.setAttribute('content', color);
   document.documentElement.style.backgroundColor = color;
   document.body.style.backgroundColor = color;
@@ -631,6 +621,7 @@ let appState = 'idle';
 let currentWords = [];
 let struckWordIds = new Set();
 let lastRecordedBlob = null;
+let justCancelledAddWord = false; // Захисний прапорець
 
 const track = document.getElementById('track');
 const wordsContainer = document.getElementById('words-container');
@@ -694,7 +685,6 @@ async function completeReviewAndRefresh() {
     }
   } catch (err) {}
 
-  // Одночасна зміна на білий колір
   setSystemBarsTheme(false, true);
   appState = 'idle';
 
@@ -704,17 +694,21 @@ async function completeReviewAndRefresh() {
   }, 160);
 }
 
-/* ================= 6. ДОДАВАННЯ СЛІВ (МИТТЄВИЙ КУРСОР ТА СКАСУВАННЯ) ================= */
+/* ================= 6. ДОДАВАННЯ СЛІВ (МИТТЄВА КЛАВІАТУРА ТА СКАСУВАННЯ) ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
+  
   wordsContainer.classList.add('dimmed');
   addWordOverlay.classList.add('active');
   newWordInput.value = '';
   
-  // Миттєвий фокус синхронно
+  // Синхронний виклик для миттєвої появи клавіатури і курсора
   newWordInput.focus();
-  newWordInput.setSelectionRange(0, 0);
+  newWordInput.click();
+  try {
+    newWordInput.setSelectionRange(0, 0);
+  } catch (e) {}
 }
 
 function cancelAddWord() {
@@ -723,6 +717,12 @@ function cancelAddWord() {
   addWordOverlay.classList.remove('active');
   wordsContainer.classList.remove('dimmed');
   appState = 'idle';
+
+  // Блокуємо випадковий запуск аудіо при закритті
+  justCancelledAddWord = true;
+  setTimeout(() => {
+    justCancelledAddWord = false;
+  }, 250);
 }
 
 async function closeAndSaveNewWord() {
@@ -746,9 +746,10 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-// Тап повз поле вводу скасовує додавання
+// ТАП ПОВЗ ПОЛЕ ВВОДУ: ЗАКРИВАЄ МЕНЮ І БЛОКУЄ ПОДІЮ
 addWordOverlay.addEventListener('click', (e) => {
-  if (e.target === addWordOverlay) {
+  e.stopPropagation();
+  if (e.target !== newWordInput) {
     cancelAddWord();
   }
 });
@@ -873,7 +874,6 @@ async function renderArchiveList() {
       </div>
     `;
 
-    // ТАП ПО СЛОВУ В СЛОВНИКУ -> ПОКАЗ / ПРИХОВУВАННЯ МІКРО-КРАПОК
     if (entry.type === 'word') {
       const wordWrapper = wrapper.querySelector('.archive-word-wrapper');
       wordWrapper.onclick = (e) => {
@@ -883,7 +883,6 @@ async function renderArchiveList() {
       };
     }
 
-    // Аудіоплеєр та перемотування
     if (entry.type === 'recording') {
       const audioRow = wrapper.querySelector('.audio-row');
       const playBtn = wrapper.querySelector('.play-btn-wrapper');
@@ -907,7 +906,6 @@ async function renderArchiveList() {
       };
     }
 
-    // Видалення
     const deleteBtn = wrapper.querySelector('.swipe-delete-btn');
     deleteBtn.onclick = async (e) => {
       e.stopPropagation();
@@ -993,7 +991,8 @@ window.addEventListener('pointerdown', (e) => {
   didSwipe = false;
 });
 
-window.addEventListener('pointerup', async (e) => {
+// Синхронний обробник жесту для миттєвої появи клавіатури
+window.addEventListener('pointerup', (e) => {
   if (!isDragging) return;
   isDragging = false;
 
@@ -1005,7 +1004,7 @@ window.addEventListener('pointerup', async (e) => {
   if (absX > 45 || absY > 45) {
     didSwipe = true;
 
-    // Свайп вниз на головному -> ввід слова
+    // Свайп вниз на головному -> ввід слова (клавіатура з'явиться одразу)
     if (diffY > 45 && absY > absX && appState === 'idle') {
       openAddWord();
       return;
@@ -1025,9 +1024,9 @@ window.addEventListener('pointerup', async (e) => {
   }
 });
 
-// Клік / Тап по головному екрану
+// Клік по головному екрану (захищений від помилкового старту)
 document.getElementById('main-page').addEventListener('click', async (e) => {
-  if (didSwipe) return;
+  if (didSwipe || justCancelledAddWord) return;
 
   if (appState === 'idle') {
     startSession();
