@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" id="status-bar-style-meta">
   
   <link rel="icon" type="image/svg+xml" href="icon.svg">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
 
   <title>Words</title>
@@ -156,7 +156,7 @@
       transform: scale(0.97);
     }
 
-    /* ПОЛЕ ВВОДУ СЛОВА: ЗАВЖДИ В DOM, БЕЗ VISIBILITY:HIDDEN */
+    /* ПОЛЕ ВВОДУ СЛОВА */
     #add-word-overlay {
       position: absolute;
       top: 0;
@@ -179,6 +179,7 @@
       pointer-events: auto;
     }
 
+    /* БЕЗ СМУЖКИ НАВІГАЦІЇ SAFARI (CONTENTEDITABLE) */
     .new-word-input {
       background: transparent;
       border: none;
@@ -189,8 +190,12 @@
       letter-spacing: -0.035em;
       text-align: center;
       color: var(--text-black);
-      width: 85%;
+      min-width: 40px;
+      max-width: 85%;
+      display: inline-block;
       caret-color: var(--text-black);
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     /* СЛОВНИК-ІНБОКС */
@@ -370,16 +375,15 @@
 
 <div id="viewport">
   <div id="track">
-    <!-- СТОРІНКА 1: ГОЛОВНА -->
     <section id="main-page" class="page">
       <div class="words-container" id="words-container"></div>
       
       <div id="add-word-overlay">
-        <input type="text" id="new-word-input" class="new-word-input" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="text" />
+        <!-- contenteditable прибирає панель зі стрілками та галочкою -->
+        <div id="new-word-input" class="new-word-input" contenteditable="plaintext-only" spellcheck="false" autocapitalize="none" inputmode="text"></div>
       </div>
     </section>
 
-    <!-- СТОРІНКА 2: СЛОВНИК-ІНБОКС -->
     <section id="archive-page" class="page">
       <div class="archive-list" id="archive-list"></div>
     </section>
@@ -387,9 +391,16 @@
 </div>
 
 <script>
-/* ================= 1. БАЗА ДАНИХ (INDEXEDDB) ================= */
+/* ================= 0. НАЛАШТУВАННЯ ХМАРНОГО БЕКАПУ ================= */
+const BACKUP_CONFIG = {
+  enabled: false,
+  endpoint: 'https://your-api-endpoint.com/backup',
+  apiKey: ''
+};
+
+/* ================= 1. БАЗА ДАНИХ (INDEXEDDB LOCAL-FIRST) ================= */
 const DB_NAME = 'SpeakingSRS_DB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 let db;
 
 function initDB() {
@@ -399,6 +410,7 @@ function initDB() {
       const d = e.target.result;
       if (!d.objectStoreNames.contains('words')) d.createObjectStore('words', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('recordings')) d.createObjectStore('recordings', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('deletions')) d.createObjectStore('deletions', { keyPath: 'id' });
     };
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -418,7 +430,8 @@ async function seedInitialWords() {
         text: list[i],
         level: 0,
         nextReview: 0,
-        createdAt: Date.now() + i
+        createdAt: Date.now() + i,
+        synced: 0
       });
     }
   }
@@ -437,9 +450,13 @@ function getAllWords() {
 function saveWord(word) {
   return new Promise((resolve) => {
     if (!db) return resolve();
+    word.synced = word.synced || 0;
     const tx = db.transaction('words', 'readwrite');
     tx.objectStore('words').put(word);
-    tx.oncomplete = () => resolve();
+    tx.oncomplete = () => {
+      resolve();
+      triggerWifiSync();
+    };
     tx.onerror = () => resolve();
   });
 }
@@ -447,9 +464,13 @@ function saveWord(word) {
 function deleteWordFromDB(id) {
   return new Promise((resolve) => {
     if (!db) return resolve();
-    const tx = db.transaction('words', 'readwrite');
+    const tx = db.transaction(['words', 'deletions'], 'readwrite');
     tx.objectStore('words').delete(id);
-    tx.oncomplete = () => resolve();
+    tx.objectStore('deletions').put({ id, type: 'word', deletedAt: Date.now(), synced: 0 });
+    tx.oncomplete = () => {
+      resolve();
+      triggerWifiSync();
+    };
     tx.onerror = () => resolve();
   });
 }
@@ -470,9 +491,13 @@ async function saveRecordingSafe(rec) {
         words: rec.words,
         audioBuffer: audioBuffer,
         mimeType: rec.mimeType || 'audio/mp4',
-        createdAt: rec.createdAt || Date.now()
+        createdAt: rec.createdAt || Date.now(),
+        synced: 0
       });
-      tx.oncomplete = () => resolve();
+      tx.oncomplete = () => {
+        resolve();
+        triggerWifiSync();
+      };
       tx.onerror = () => resolve();
     } catch (err) {
       resolve();
@@ -493,20 +518,103 @@ function getAllRecordings() {
 function deleteRecordingFromDB(id) {
   return new Promise((resolve) => {
     if (!db) return resolve();
-    const tx = db.transaction('recordings', 'readwrite');
+    const tx = db.transaction(['recordings', 'deletions'], 'readwrite');
     tx.objectStore('recordings').delete(id);
-    tx.oncomplete = () => resolve();
+    tx.objectStore('deletions').put({ id, type: 'recording', deletedAt: Date.now(), synced: 0 });
+    tx.oncomplete = () => {
+      resolve();
+      triggerWifiSync();
+    };
     tx.onerror = () => resolve();
   });
 }
 
-/* ================= 2. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
+/* ================= 2. ПЕРЕВІРКА WI-FI ТА СИНХРОНІЗАЦІЯ ================= */
+function isWifiConnection() {
+  if (!navigator.onLine) return false;
+  
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (conn) {
+    if (conn.type) {
+      return conn.type === 'wifi' || conn.type === 'ethernet';
+    }
+    if (conn.saveData) return false;
+  }
+  return navigator.onLine;
+}
+
+function bufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+let syncTimeout = null;
+function triggerWifiSync() {
+  if (!BACKUP_CONFIG.enabled || !isWifiConnection()) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(performSync, 3000);
+}
+
+async function performSync() {
+  if (!BACKUP_CONFIG.enabled || !isWifiConnection()) return;
+
+  try {
+    const words = await getAllWords();
+    const recordings = await getAllRecordings();
+    
+    const unsyncedWords = words.filter(w => !w.synced);
+    const unsyncedRecordings = recordings.filter(r => !r.synced);
+
+    if (unsyncedWords.length === 0 && unsyncedRecordings.length === 0) return;
+
+    const payload = {
+      timestamp: Date.now(),
+      words: unsyncedWords,
+      recordings: unsyncedRecordings.map(r => ({
+        id: r.id,
+        date: r.date,
+        words: r.words,
+        createdAt: r.createdAt,
+        mimeType: r.mimeType,
+        audioBase64: r.audioBuffer ? bufferToBase64(r.audioBuffer) : null
+      }))
+    };
+
+    const res = await fetch(BACKUP_CONFIG.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(BACKUP_CONFIG.apiKey ? { 'Authorization': `Bearer ${BACKUP_CONFIG.apiKey}` } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const tx = db.transaction(['words', 'recordings'], 'readwrite');
+      const wStore = tx.objectStore('words');
+      const rStore = tx.objectStore('recordings');
+
+      unsyncedWords.forEach(w => { w.synced = 1; wStore.put(w); });
+      unsyncedRecordings.forEach(r => { r.synced = 1; rStore.put(r); });
+    }
+  } catch (err) {}
+}
+
+window.addEventListener('online', triggerWifiSync);
+if (navigator.connection) {
+  navigator.connection.addEventListener('change', triggerWifiSync);
+}
+
+/* ================= 3. СИСТЕМНІ СМУГИ (STATUS BAR) ================= */
 const themeColorMeta = document.getElementById('theme-color-meta');
 const statusBarStyleMeta = document.getElementById('status-bar-style-meta');
 
 function setSystemBarsTheme(isDark, instant = false) {
   const color = isDark ? '#000000' : '#ffffff';
-  
   if (themeColorMeta) themeColorMeta.setAttribute('content', color);
   document.documentElement.style.backgroundColor = color;
   document.body.style.backgroundColor = color;
@@ -521,7 +629,7 @@ function setSystemBarsTheme(isDark, instant = false) {
   }
 }
 
-/* ================= 3. АЛГОРИТМ SRS ================= */
+/* ================= 4. АЛГОРИТМ SRS ================= */
 const INTERVALS = [
   0,
   4 * 60 * 60 * 1000,
@@ -543,7 +651,7 @@ async function pickThreeWords() {
   return pool.slice(0, 3);
 }
 
-/* ================= 4. АУДІОЗАПИС ТА ЗВУК ================= */
+/* ================= 5. АУДІОЗАПИС ЗІ СТИСНЕННЯМ (28 KBPS MONO) ================= */
 let audioCtx = null;
 let mediaRecorder = null;
 let audioChunks = [];
@@ -569,7 +677,14 @@ function playBeep() {
 
 async function startAudioRecording() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        sampleRate: 24000,
+        echoCancellation: true,
+        noiseSuppression: true
+      }
+    });
     
     recordedMimeType = 'audio/mp4';
     if (typeof MediaRecorder.isTypeSupported === 'function') {
@@ -582,7 +697,12 @@ async function startAudioRecording() {
       }
     }
 
-    mediaRecorder = new MediaRecorder(stream, recordedMimeType ? { mimeType: recordedMimeType } : {});
+    const options = {
+      audioBitsPerSecond: 28000
+    };
+    if (recordedMimeType) options.mimeType = recordedMimeType;
+
+    mediaRecorder = new MediaRecorder(stream, options);
     audioChunks = [];
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.push(e.data);
@@ -616,12 +736,12 @@ function stopAudioRecording() {
   });
 }
 
-/* ================= 5. УПРАВЛІННЯ UI ================= */
+/* ================= 6. УПРАВЛІННЯ UI ================= */
 let appState = 'idle'; 
 let currentWords = [];
 let struckWordIds = new Set();
 let lastRecordedBlob = null;
-let justCancelledAddWord = false; // Захисний прапорець
+let justCancelledAddWord = false;
 
 const track = document.getElementById('track');
 const wordsContainer = document.getElementById('words-container');
@@ -670,6 +790,7 @@ async function completeReviewAndRefresh() {
         w.level = 0;
         w.nextReview = Date.now();
       }
+      w.synced = 0;
       await saveWord(w);
     }
 
@@ -694,31 +815,25 @@ async function completeReviewAndRefresh() {
   }, 160);
 }
 
-/* ================= 6. ДОДАВАННЯ СЛІВ (МИТТЄВА КЛАВІАТУРА ТА СКАСУВАННЯ) ================= */
+/* ================= 7. ДОДАВАННЯ СЛІВ (БЕЗ ПАНЕЛІ SAFARI) ================= */
 function openAddWord() {
   if (appState !== 'idle') return;
   appState = 'adding';
   
   wordsContainer.classList.add('dimmed');
   addWordOverlay.classList.add('active');
-  newWordInput.value = '';
+  newWordInput.textContent = '';
   
-  // Синхронний виклик для миттєвої появи клавіатури і курсора
   newWordInput.focus();
-  newWordInput.click();
-  try {
-    newWordInput.setSelectionRange(0, 0);
-  } catch (e) {}
 }
 
 function cancelAddWord() {
-  newWordInput.value = '';
+  newWordInput.textContent = '';
   newWordInput.blur();
   addWordOverlay.classList.remove('active');
   wordsContainer.classList.remove('dimmed');
   appState = 'idle';
 
-  // Блокуємо випадковий запуск аудіо при закритті
   justCancelledAddWord = true;
   setTimeout(() => {
     justCancelledAddWord = false;
@@ -726,7 +841,7 @@ function cancelAddWord() {
 }
 
 async function closeAndSaveNewWord() {
-  const text = newWordInput.value.trim().toLowerCase();
+  const text = newWordInput.textContent.trim().toLowerCase();
   if (text) {
     const parts = text.split(/[,+\n]/).map(s => s.trim()).filter(Boolean);
     for (let i = 0; i < parts.length; i++) {
@@ -735,7 +850,8 @@ async function closeAndSaveNewWord() {
         text: parts[i],
         level: 0,
         nextReview: 0,
-        createdAt: Date.now() + i
+        createdAt: Date.now() + i,
+        synced: 0
       });
     }
   }
@@ -746,7 +862,6 @@ async function closeAndSaveNewWord() {
   await renderMainWords();
 }
 
-// ТАП ПОВЗ ПОЛЕ ВВОДУ: ЗАКРИВАЄ МЕНЮ І БЛОКУЄ ПОДІЮ
 addWordOverlay.addEventListener('click', (e) => {
   e.stopPropagation();
   if (e.target !== newWordInput) {
@@ -754,7 +869,7 @@ addWordOverlay.addEventListener('click', (e) => {
   }
 });
 
-/* ================= 7. СЛОВНИК-ІНБОКС ТА МІКРО-КРАПКИ ================= */
+/* ================= 8. СЛОВНИК-ІНБОКС ТА АУДІО ================= */
 let activeAudio = null;
 let activeAudioId = null;
 let activeRowEl = null;
@@ -978,7 +1093,7 @@ function closeArchive() {
   }
 }
 
-/* ================= 8. ЖЕСТИ ТА ТАПИ ================= */
+/* ================= 9. ЖЕСТИ ТА ТАПИ ================= */
 let startX = 0;
 let startY = 0;
 let isDragging = false;
@@ -991,7 +1106,6 @@ window.addEventListener('pointerdown', (e) => {
   didSwipe = false;
 });
 
-// Синхронний обробник жесту для миттєвої появи клавіатури
 window.addEventListener('pointerup', (e) => {
   if (!isDragging) return;
   isDragging = false;
@@ -1004,19 +1118,14 @@ window.addEventListener('pointerup', (e) => {
   if (absX > 45 || absY > 45) {
     didSwipe = true;
 
-    // Свайп вниз на головному -> ввід слова (клавіатура з'явиться одразу)
     if (diffY > 45 && absY > absX && appState === 'idle') {
       openAddWord();
       return;
     }
-
-    // Свайп вліво -> словник
     if (diffX < -45 && absX > absY && appState === 'idle') {
       openArchive();
       return;
     }
-
-    // Свайп вправо -> вихід зі словника
     if (diffX > 45 && absX > absY && appState === 'archive') {
       closeArchive();
       return;
@@ -1024,7 +1133,6 @@ window.addEventListener('pointerup', (e) => {
   }
 });
 
-// Клік по головному екрану (захищений від помилкового старту)
 document.getElementById('main-page').addEventListener('click', async (e) => {
   if (didSwipe || justCancelledAddWord) return;
 
@@ -1057,6 +1165,7 @@ document.getElementById('main-page').addEventListener('click', async (e) => {
 
 newWordInput.addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
+    e.preventDefault();
     await closeAndSaveNewWord();
   }
 });
@@ -1069,6 +1178,7 @@ if ('serviceWorker' in navigator) {
 
 initDB().then(() => {
   renderMainWords();
+  triggerWifiSync();
 });
 </script>
 </body>
