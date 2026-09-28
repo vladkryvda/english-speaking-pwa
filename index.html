@@ -396,92 +396,180 @@ const BACKUP_CONFIG = {
   apiKey: ''
 };
 
-/* ================= 1. БАЗА ДАНИХ (INDEXEDDB LOCAL-FIRST) ================= */
+/* ================= 1. БАЗА ДАНИХ (INDEXEDDB + STORAGE PERSISTENCE) ================= */
 const DB_NAME = 'SpeakingSRS_DB';
 const DB_VERSION = 4;
 let db;
 
+// Захист сховища від очищення браузером при деплоях та оновленнях
+async function requestPersistentStorage() {
+  if (navigator.storage && navigator.storage.persist) {
+    try {
+      const isPersisted = await navigator.storage.persisted();
+      if (!isPersisted) {
+        await navigator.storage.persist();
+      }
+    } catch (e) {}
+  }
+}
+
 function initDB() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    if (!window.indexedDB) {
+      console.warn('IndexedDB не підтримується');
+      return resolve();
+    }
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
+
     request.onupgradeneeded = (e) => {
       const d = e.target.result;
       if (!d.objectStoreNames.contains('words')) d.createObjectStore('words', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('recordings')) d.createObjectStore('recordings', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('deletions')) d.createObjectStore('deletions', { keyPath: 'id' });
     };
+
     request.onsuccess = (e) => {
       db = e.target.result;
+      db.onversionchange = () => {
+        db.close();
+      };
       seedInitialWords().then(resolve);
     };
-    request.onerror = (e) => reject(e);
+
+    request.onerror = (e) => {
+      console.warn('Помилка IndexedDB:', e);
+      resolve();
+    };
+
+    request.onblocked = () => {
+      console.warn('IndexedDB заблоковано старою вкладкою');
+      resolve();
+    };
   });
+}
+
+// Синхронізація слів у LocalStorage як додаткова страховка
+async function syncWordsToLocalStorage() {
+  try {
+    const words = await getAllWords();
+    if (words && words.length > 0) {
+      localStorage.setItem('SpeakingSRS_words_backup', JSON.stringify(words));
+    }
+  } catch (e) {}
 }
 
 async function seedInitialWords() {
   const words = await getAllWords();
   if (words.length === 0) {
-    const list = ['figure out', 'whatever', 'sometimes', 'frank', 'creep', 'freak'];
-    for (let i = 0; i < list.length; i++) {
-      await saveWord({
-        id: 'w_' + (Date.now() + i),
-        text: list[i],
-        level: 0,
-        nextReview: 0,
-        createdAt: Date.now() + i,
-        synced: 0
-      });
+    let restored = false;
+    try {
+      const backup = localStorage.getItem('SpeakingSRS_words_backup') || 
+                     localStorage.getItem('words_backup') || 
+                     localStorage.getItem('words');
+      if (backup) {
+        const list = JSON.parse(backup);
+        if (Array.isArray(list) && list.length > 0) {
+          for (const w of list) {
+            await saveWord(w);
+          }
+          restored = true;
+        }
+      }
+    } catch (e) {}
+
+    if (!restored) {
+      const list = ['figure out', 'whatever', 'sometimes', 'frank', 'creep', 'freak'];
+      for (let i = 0; i < list.length; i++) {
+        await saveWord({
+          id: 'w_' + (Date.now() + i),
+          text: list[i],
+          level: 0,
+          nextReview: 0,
+          createdAt: Date.now() + i,
+          synced: 0
+        });
+      }
     }
+  } else {
+    syncWordsToLocalStorage();
   }
 }
 
 function getAllWords() {
   return new Promise((resolve) => {
     if (!db) return resolve([]);
-    const tx = db.transaction('words', 'readonly');
-    const req = tx.objectStore('words').getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => resolve([]);
+    try {
+      const tx = db.transaction('words', 'readonly');
+      const req = tx.objectStore('words').getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    } catch (e) {
+      resolve([]);
+    }
   });
 }
 
 function saveWord(word) {
   return new Promise((resolve) => {
     if (!db) return resolve();
-    word.synced = word.synced || 0;
-    const tx = db.transaction('words', 'readwrite');
-    tx.objectStore('words').put(word);
-    tx.oncomplete = () => {
+    try {
+      word.synced = word.synced || 0;
+      const tx = db.transaction('words', 'readwrite');
+      tx.objectStore('words').put(word);
+      tx.oncomplete = () => {
+        syncWordsToLocalStorage();
+        resolve();
+        triggerWifiSync();
+      };
+      tx.onerror = () => resolve();
+    } catch (e) {
       resolve();
-      triggerWifiSync();
-    };
-    tx.onerror = () => resolve();
+    }
   });
 }
 
 function deleteWordFromDB(id) {
   return new Promise((resolve) => {
     if (!db) return resolve();
-    const tx = db.transaction(['words', 'deletions'], 'readwrite');
-    tx.objectStore('words').delete(id);
-    tx.objectStore('deletions').put({ id, type: 'word', deletedAt: Date.now(), synced: 0 });
-    tx.oncomplete = () => {
+    try {
+      const tx = db.transaction(['words', 'deletions'], 'readwrite');
+      tx.objectStore('words').delete(id);
+      tx.objectStore('deletions').put({ id, type: 'word', deletedAt: Date.now(), synced: 0 });
+      tx.oncomplete = () => {
+        syncWordsToLocalStorage();
+        resolve();
+        triggerWifiSync();
+      };
+      tx.onerror = () => resolve();
+    } catch (e) {
       resolve();
-      triggerWifiSync();
-    };
-    tx.onerror = () => resolve();
+    }
+  });
+}
+
+function blobToArrayBuffer(blob) {
+  if (!blob) return Promise.resolve(null);
+  if (typeof blob.arrayBuffer === 'function') {
+    return blob.arrayBuffer().catch(() => null);
+  }
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsArrayBuffer(blob);
   });
 }
 
 async function saveRecordingSafe(rec) {
-  return new Promise(async (resolve) => {
-    if (!db) return resolve();
-    try {
-      let audioBuffer = null;
-      if (rec.blob && rec.blob.arrayBuffer) {
-        try { audioBuffer = await rec.blob.arrayBuffer(); } catch (e) {}
-      }
+  if (!db) return;
+  try {
+    let audioBuffer = null;
+    if (rec.blob) {
+      audioBuffer = await blobToArrayBuffer(rec.blob);
+    }
 
+    return new Promise((resolve) => {
       const tx = db.transaction('recordings', 'readwrite');
       tx.objectStore('recordings').put({
         id: rec.id,
@@ -495,37 +583,45 @@ async function saveRecordingSafe(rec) {
       tx.oncomplete = () => {
         resolve();
         triggerWifiSync();
-        updateAppBadge(); // Оновлюємо бейджик після збереження
+        updateAppBadge();
       };
       tx.onerror = () => resolve();
-    } catch (err) {
-      resolve();
-    }
-  });
+    });
+  } catch (err) {
+    return;
+  }
 }
 
 function getAllRecordings() {
   return new Promise((resolve) => {
     if (!db) return resolve([]);
-    const tx = db.transaction('recordings', 'readonly');
-    const req = tx.objectStore('recordings').getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => resolve([]);
+    try {
+      const tx = db.transaction('recordings', 'readonly');
+      const req = tx.objectStore('recordings').getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    } catch (e) {
+      resolve([]);
+    }
   });
 }
 
 function deleteRecordingFromDB(id) {
   return new Promise((resolve) => {
     if (!db) return resolve();
-    const tx = db.transaction(['recordings', 'deletions'], 'readwrite');
-    tx.objectStore('recordings').delete(id);
-    tx.objectStore('deletions').put({ id, type: 'recording', deletedAt: Date.now(), synced: 0 });
-    tx.oncomplete = () => {
+    try {
+      const tx = db.transaction(['recordings', 'deletions'], 'readwrite');
+      tx.objectStore('recordings').delete(id);
+      tx.objectStore('deletions').put({ id, type: 'recording', deletedAt: Date.now(), synced: 0 });
+      tx.oncomplete = () => {
+        resolve();
+        triggerWifiSync();
+        updateAppBadge();
+      };
+      tx.onerror = () => resolve();
+    } catch (e) {
       resolve();
-      triggerWifiSync();
-      updateAppBadge();
-    };
-    tx.onerror = () => resolve();
+    }
   });
 }
 
@@ -536,19 +632,16 @@ async function updateAppBadge() {
     const recordings = await getAllRecordings();
     const todayStr = new Date().toDateString();
     
-    // Перевіряємо, чи був хоч один запис сьогодні
     const practicedToday = recordings.some(r => {
       const recDate = new Date(r.createdAt || 0).toDateString();
       return recDate === todayStr;
     });
 
     if (practicedToday) {
-      // Якщо займався — знімаємо бейджик з іконки
       if ('clearAppBadge' in navigator) {
         navigator.clearAppBadge().catch(() => {});
       }
     } else {
-      // Якщо сьогодні ще не було практики — ставимо бейджик 1
       navigator.setAppBadge(1).catch(() => {});
     }
   } catch (e) {}
@@ -710,14 +803,14 @@ async function startAudioRecording() {
       }
     });
     
-    recordedMimeType = 'audio/mp4';
+    recordedMimeType = '';
     if (typeof MediaRecorder.isTypeSupported === 'function') {
-      if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        recordedMimeType = 'audio/mp4';
-      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
         recordedMimeType = 'audio/webm;codecs=opus';
       } else if (MediaRecorder.isTypeSupported('audio/webm')) {
         recordedMimeType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        recordedMimeType = 'audio/mp4';
       }
     }
 
@@ -725,6 +818,10 @@ async function startAudioRecording() {
     if (recordedMimeType) options.mimeType = recordedMimeType;
 
     mediaRecorder = new MediaRecorder(stream, options);
+    if (!recordedMimeType && mediaRecorder.mimeType) {
+      recordedMimeType = mediaRecorder.mimeType;
+    }
+
     audioChunks = [];
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.push(e.data);
@@ -750,8 +847,10 @@ function stopAudioRecording() {
       return;
     }
     mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: recordedMimeType });
-      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(audioChunks, { type: recordedMimeType || 'audio/mp4' });
+      if (mediaRecorder.stream) {
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      }
       resolve(blob);
     };
     mediaRecorder.stop();
@@ -825,6 +924,7 @@ async function completeReviewAndRefresh() {
         words: currentWords.map(w => w.text),
         createdAt: Date.now()
       });
+      lastRecordedBlob = null;
     }
   } catch (err) {}
 
@@ -834,7 +934,7 @@ async function completeReviewAndRefresh() {
   setTimeout(async () => {
     await renderMainWords();
     wordsContainer.style.opacity = '1';
-    updateAppBadge(); // Оновлення бейджика після сесії
+    updateAppBadge();
   }, 160);
 }
 
@@ -896,6 +996,7 @@ addWordOverlay.addEventListener('click', (e) => {
 let activeAudio = null;
 let activeAudioId = null;
 let activeRowEl = null;
+let currentAudioUrl = null;
 
 const SVG_PLAY = `<svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>`;
 const SVG_PAUSE = `<svg width="12" height="12" viewBox="0 0 24 24"><rect x="5" y="3" width="4" height="18"></rect><rect x="15" y="3" width="4" height="18"></rect></svg>`;
@@ -930,8 +1031,13 @@ function handlePlayPause(rec, rowEl) {
   }
   if (!audioBlob) return;
 
-  const audioUrl = URL.createObjectURL(audioBlob);
-  activeAudio = new Audio(audioUrl);
+  if (currentAudioUrl) {
+    URL.revokeObjectURL(currentAudioUrl);
+    currentAudioUrl = null;
+  }
+
+  currentAudioUrl = URL.createObjectURL(audioBlob);
+  activeAudio = new Audio(currentAudioUrl);
   activeAudioId = rec.id;
   activeRowEl = rowEl;
 
@@ -951,6 +1057,10 @@ function handlePlayPause(rec, rowEl) {
     btn.innerHTML = SVG_PLAY;
     rowEl.classList.remove('active');
     progressEl.style.width = '0%';
+    if (currentAudioUrl) {
+      URL.revokeObjectURL(currentAudioUrl);
+      currentAudioUrl = null;
+    }
     activeAudio = null;
     activeAudioId = null;
     activeRowEl = null;
@@ -1199,10 +1309,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-initDB().then(() => {
-  renderMainWords();
+initDB().then(async () => {
+  await requestPersistentStorage();
+  await renderMainWords();
   triggerWifiSync();
-  updateAppBadge(); // Перевірка бейджика при відкритті
+  updateAppBadge();
 });
 </script>
 </body>
